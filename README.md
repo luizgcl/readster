@@ -1,27 +1,17 @@
 # Readster
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.2.8.
+## About
 
-## Development server
+> This project was born from an idea of ​​mine, where I seek to facilitate the reading of some articles, with a personalized reader, just insert the text and start reading, so you can control the font size and apply a highlight so as not to get lost in the text.
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+### Running project
 
-## Code scaffolding
+1. After you have cloned this project, execute this command to install dependencies:
+```bash
+npm install
+```
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
-
-## Build
-
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
-
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+2. After installation, execute this command to start application:
+```bash
+npm start
+```
