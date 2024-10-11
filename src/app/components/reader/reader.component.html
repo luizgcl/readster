@@ -1,0 +1,44 @@
+<div class="bg-white p-4 rounded-md shadow-lg mx-96">
+  <h2 class="text-blue-300 font-bold text-2xl">Leitura</h2>
+  <div class="overflow-auto w-full h-[600px] p-3 mx-2 my-3" [style.fontSize]="fontSize | fontSize">
+    @for(word of text().split(' '); track $index; let i = $index) {
+      @if (i === highlightedIndex) {
+        <span #wordElement [class.highlight]="i === highlightedIndex" [attr.id]="'word-' + i">{{ word }}</span>{{' '}}
+      } @else {
+        <span [class.highlight]="i === highlightedIndex">{{ word }}</span>{{' '}}
+      }
+    }
+  </div>
+  <footer class="flex flex-col items-center w-full">
+    <div class="flex justify-around w-full">
+      <div class="flex gap-2">
+        <button 
+          class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600"
+          [disabled]="this.currentFontStep == this.maxFontSteps">
+          <lucide-icon name="a-arrow-up" (click)="increaseFontSize()" size="32" />
+        </button>
+        <button
+          class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600">
+          <lucide-icon name="rotate-ccw" (click)="resetFontSize()" size="32" />
+        </button>
+        <button
+          class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600"
+          [disabled]="this.fontSize == 12">
+          <lucide-icon name="a-arrow-down" (click)="decreaseFontSize()" size="32" />
+        </button>
+      </div>
+      <div class="flex gap-2">
+        <button class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600" (click)="highlightPreviousWord()">
+          <lucide-icon name="arrow-big-left" size="32" />
+        </button>
+        <button class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600" (click)="highlightNextWord()">
+          <lucide-icon name="arrow-big-right" size="32" />
+        </button>
+      </div>
+    </div>
+    <button class="flex justify-center uppercase items-center p-2 rounded-md bg-red-300 hover:bg-red-400 transition-colors" (click)="quitReading.emit()">
+      <lucide-icon name="x" />
+      Encerrar leitura
+    </button>
+  </footer>
+</div>
