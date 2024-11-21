@@ -1,11 +1,12 @@
 import { Component, ElementRef, input, output, QueryList, Signal, viewChild, viewChildren } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { FontSizePipe } from '../../pipes/font-size.pipe';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-reader',
   standalone: true,
-  imports: [LucideAngularModule, FontSizePipe],
+  imports: [LucideAngularModule, FontSizePipe, FormsModule],
   templateUrl: './reader.component.html',
   styleUrl: './reader.component.scss'
 })
@@ -22,6 +23,7 @@ export class ReaderComponent {
 
   fontSize = 20;
 
+  highlightWords = 1;
   highlightedIndex: number = 0;
 
   wordElements = viewChild<ElementRef>('wordElement');
@@ -39,7 +41,7 @@ export class ReaderComponent {
   highlightNextWord(): void {
     const words = this.text().split(' ');
     if (this.highlightedIndex < words.length - 1) {
-      this.highlightedIndex++;
+      this.highlightedIndex+=this.highlightWords;
     } else {
       this.highlightedIndex = 0;
     }

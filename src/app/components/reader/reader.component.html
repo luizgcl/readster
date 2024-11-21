@@ -1,11 +1,11 @@
 <div class="bg-white p-4 rounded-md shadow-lg mx-96">
   <h2 class="text-blue-300 font-bold text-2xl">Leitura</h2>
-  <div class="overflow-auto w-full h-[600px] p-3 mx-2 my-3" [style.fontSize]="fontSize | fontSize">
+  <div class="overflow-auto min-w-[80vw] md:min-w-[500px] w-full h-[600px] p-3 mx-2 my-3" [style.fontSize]="fontSize | fontSize">
     @for(word of text().split(' '); track $index; let i = $index) {
-      @if (i === highlightedIndex) {
-        <span #wordElement [class.highlight]="i === highlightedIndex" [attr.id]="'word-' + i">{{ word }}</span>{{' '}}
+      @if (i >= highlightedIndex && i <= highlightedIndex + highlightWords) {
+        <span #wordElement [class.highlight]="i >= highlightedIndex && i <= highlightedIndex + highlightWords" [attr.id]="'word-' + i">{{ word }}</span>{{' '}}
       } @else {
-        <span [class.highlight]="i === highlightedIndex">{{ word }}</span>{{' '}}
+        <span [class.highlight]="i >= highlightedIndex && i <= highlightedIndex + highlightWords">{{ word }}</span>{{' '}}
       }
     }
   </div>
@@ -31,12 +31,13 @@
         <button class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600" (click)="highlightPreviousWord()">
           <lucide-icon name="arrow-big-left" size="32" />
         </button>
+        <input type="number" [(ngModel)]="highlightWords" [ngModelOptions]="{ standalone: true }" class="w-12 rounded-sm text-center text-xl" />
         <button class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600" (click)="highlightNextWord()">
           <lucide-icon name="arrow-big-right" size="32" />
         </button>
       </div>
     </div>
-    <button class="flex justify-center uppercase items-center p-2 rounded-md bg-red-300 hover:bg-red-400 transition-colors" (click)="quitReading.emit()">
+    <button class="mt-2 flex justify-center uppercase items-center p-2 rounded-md bg-red-300 hover:bg-red-400 transition-colors" (click)="quitReading.emit()">
       <lucide-icon name="x" />
       Encerrar leitura
     </button>
