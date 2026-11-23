@@ -6,3 +6,11 @@
 * {
   font-family: 'Poppins', sans-serif;
 }
+
+@layer components {
+  .btn-icon {
+    @apply rounded-md p-2 text-white bg-blue-600 hover:bg-blue-700 transition-colors
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-700
+      disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600;
+  }
+}

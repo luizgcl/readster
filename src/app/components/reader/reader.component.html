@@ -1,44 +1,49 @@
-<div class="bg-white p-4 rounded-md shadow-lg mx-96">
-  <h2 class="text-blue-300 font-bold text-2xl">Leitura</h2>
-  <div class="overflow-auto min-w-[80vw] md:min-w-[500px] w-full h-[600px] p-3 mx-2 my-3" [style.fontSize]="fontSize | fontSize">
-    @for(word of text().split(' '); track $index; let i = $index) {
-      @if (i >= highlightedIndex && i <= highlightedIndex + highlightWords) {
-        <span #wordElement [class.highlight]="i >= highlightedIndex && i <= highlightedIndex + highlightWords" [attr.id]="'word-' + i">{{ word }}</span>{{' '}}
-      } @else {
-        <span [class.highlight]="i >= highlightedIndex && i <= highlightedIndex + highlightWords">{{ word }}</span>{{' '}}
-      }
+<div class="flex flex-col w-full max-w-3xl bg-white p-4 rounded-md shadow-lg">
+  <h2 class="text-blue-700 font-bold text-2xl">Leitura</h2>
+  <div class="overflow-auto h-[55dvh] p-3 my-3 leading-relaxed break-words" [style.fontSize]="fontSize | fontSize">
+    @for (word of words(); track $index) {
+      <span [class.highlight]="isHighlighted($index)">{{ word }}</span>{{ ' ' }}
     }
   </div>
-  <footer class="flex flex-col items-center w-full">
-    <div class="flex justify-around w-full">
-      <div class="flex gap-2">
-        <button 
-          class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600"
-          [disabled]="this.currentFontStep == this.maxFontSteps">
-          <lucide-icon name="a-arrow-up" (click)="increaseFontSize()" size="32" />
+  <footer class="flex flex-col items-center w-full gap-3">
+    <div class="flex flex-wrap justify-around gap-3 w-full">
+      <div class="flex gap-2" role="group" aria-label="Tamanho da fonte">
+        <button type="button" class="btn-icon" aria-label="Aumentar fonte"
+          [disabled]="fontSize >= maxFontSize" (click)="increaseFontSize()">
+          <lucide-icon name="a-arrow-up" size="32" aria-hidden="true" />
         </button>
-        <button
-          class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600">
-          <lucide-icon name="rotate-ccw" (click)="resetFontSize()" size="32" />
+        <button type="button" class="btn-icon" aria-label="Restaurar tamanho da fonte"
+          [disabled]="fontSize === defaultFontSize" (click)="resetFontSize()">
+          <lucide-icon name="rotate-ccw" size="32" aria-hidden="true" />
         </button>
-        <button
-          class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600"
-          [disabled]="this.fontSize == 12">
-          <lucide-icon name="a-arrow-down" (click)="decreaseFontSize()" size="32" />
+        <button type="button" class="btn-icon" aria-label="Diminuir fonte"
+          [disabled]="fontSize <= minFontSize" (click)="decreaseFontSize()">
+          <lucide-icon name="a-arrow-down" size="32" aria-hidden="true" />
         </button>
       </div>
-      <div class="flex gap-2">
-        <button class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600" (click)="highlightPreviousWord()">
-          <lucide-icon name="arrow-big-left" size="32" />
+      <div class="flex items-center gap-2" role="group" aria-label="Navegação">
+        <button type="button" class="btn-icon" aria-label="Palavras anteriores"
+          [disabled]="isAtStart" (click)="highlightPreviousWord()">
+          <lucide-icon name="arrow-big-left" size="32" aria-hidden="true" />
         </button>
-        <input type="number" [(ngModel)]="highlightWords" [ngModelOptions]="{ standalone: true }" class="w-12 rounded-sm text-center text-xl" />
-        <button class="rounded-md p-2 text-white text-2xl bg-blue-500 hover:bg-blue-600" (click)="highlightNextWord()">
-          <lucide-icon name="arrow-big-right" size="32" />
+        <label class="sr-only" for="highlight-words">Palavras destacadas por vez</label>
+        <select id="highlight-words" title="Palavras destacadas por vez"
+          class="h-12 rounded-md border border-gray-300 px-2 text-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+          [(ngModel)]="highlightWords">
+          @for (option of highlightOptions; track option) {
+            <option [ngValue]="option">{{ option }}</option>
+          }
+        </select>
+        <button type="button" class="btn-icon" aria-label="Próximas palavras"
+          [disabled]="isAtEnd" (click)="highlightNextWord()">
+          <lucide-icon name="arrow-big-right" size="32" aria-hidden="true" />
         </button>
       </div>
     </div>
-    <button class="mt-2 flex justify-center uppercase items-center p-2 rounded-md bg-red-300 hover:bg-red-400 transition-colors" (click)="quitReading.emit()">
-      <lucide-icon name="x" />
+    <button type="button"
+      class="flex justify-center uppercase items-center gap-1 p-2 rounded-md bg-red-300 hover:bg-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700"
+      (click)="quitReading.emit()">
+      <lucide-icon name="x" aria-hidden="true" />
       Encerrar leitura
     </button>
   </footer>

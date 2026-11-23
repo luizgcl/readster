@@ -1,3 +1,5 @@
+// Color only: changing size/padding here reflows the text on every step.
 .highlight {
-  @apply bg-amber-300 text-3xl font-bold p-1 rounded-sm;
+  @apply bg-amber-200 rounded-sm;
+  box-shadow: 0 0 0 2px theme('colors.amber.200');
 }
