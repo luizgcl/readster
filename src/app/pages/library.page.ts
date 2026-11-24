@@ -1,7 +1,8 @@
-import { afterNextRender, Component, signal } from '@angular/core';
+import { afterNextRender, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { formatDuration } from '../reading';
+import { ConfirmService } from '../components/confirm-dialog.component';
 import { clearStats, LibraryItem, loadLibrary, loadStats, ReadingStats, removeFromLibrary } from '../preferences';
 
 @Component({
@@ -75,6 +76,7 @@ import { clearStats, LibraryItem, loadLibrary, loadStats, ReadingStats, removeFr
 export class LibraryPage {
   // localStorage only exists in the browser: load after hydration and render nothing until then,
   // so returning readers never see the empty state flash.
+  private confirm = inject(ConfirmService);
   loaded = signal(false);
   library = signal<LibraryItem[]>([]);
   stats = signal<ReadingStats>({ words: 0, ms: 0 });
@@ -96,15 +98,27 @@ export class LibraryPage {
       + `média de ${wpm} palavras/min.`;
   }
 
-  resetStats() {
-    if (confirm('Zerar suas estatísticas de leitura? Esta ação não pode ser desfeita.')) {
+  async resetStats() {
+    const confirmed = await this.confirm.ask({
+      title: 'Zerar estatísticas?',
+      message: 'As palavras lidas, o tempo e a média voltam a zero. Seus textos continuam na biblioteca.',
+      confirmLabel: 'Zerar',
+      danger: true,
+    });
+    if (confirmed) {
       clearStats();
       this.stats.set(loadStats());
     }
   }
 
-  removeItem(item: LibraryItem) {
-    if (confirm(`Excluir "${item.title}" da biblioteca? Esta ação não pode ser desfeita.`)) {
+  async removeItem(item: LibraryItem) {
+    const confirmed = await this.confirm.ask({
+      title: 'Excluir texto?',
+      message: `"${item.title}" e o progresso dele serão apagados deste navegador. Não dá para desfazer.`,
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (confirmed) {
       removeFromLibrary(item.id);
       this.library.set(loadLibrary());
     }

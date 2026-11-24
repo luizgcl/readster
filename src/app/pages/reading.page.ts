@@ -1,7 +1,8 @@
-import { afterNextRender, Component, inject, input, signal } from '@angular/core';
+import { afterNextRender, Component, inject, input, signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ReaderComponent } from '../components/reader/reader.component';
 import { loadLibrary } from '../preferences';
+import { ConfirmService } from '../components/confirm-dialog.component';
 import { UNSAVED_ID, UnsavedText } from './new-reading.page';
 
 interface Opened {
@@ -39,6 +40,8 @@ export class ReadingPage {
   id = input.required<string>();
 
   private unsaved = inject(UnsavedText);
+  private confirm = inject(ConfirmService);
+  private reader = viewChild(ReaderComponent);
   opened = signal<Opened | null>(null);
   notFound = signal(false);
 
@@ -53,6 +56,23 @@ export class ReadingPage {
       const item = loadLibrary().find(other => other.id === this.id());
       // A finished text starts over; anything else resumes where it stopped.
       this.show(item ? { text: item.text, startIndex: item.index >= item.words ? 0 : item.index, itemId: item.id } : null);
+    });
+  }
+
+  /**
+   * Leaving mid-reading (back button, logo, browser back) asks first, so a slip of the finger
+   * does not close the text. Progress is saved either way; a finished text leaves without asking.
+   */
+  confirmLeave(): boolean | Promise<boolean> {
+    const reader = this.reader();
+    if (!reader || reader.completed) return true;
+    reader.pause();
+    return this.confirm.ask({
+      title: 'Sair da leitura?',
+      message: 'Seu progresso fica salvo e você pode continuar depois, da biblioteca.',
+      confirmLabel: 'Sair',
+      cancelLabel: 'Continuar lendo',
+      preferCancel: true,
     });
   }
 

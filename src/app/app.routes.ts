@@ -24,6 +24,7 @@ export const routes: Routes = [
       {
         path: 'ler/:id',
         title: 'Lendo | Readster',
+        canDeactivate: [(page: { confirmLeave(): boolean | Promise<boolean> }) => page.confirmLeave()],
         loadComponent: () => import('./pages/reading.page').then(m => m.ReadingPage),
       },
     ],
