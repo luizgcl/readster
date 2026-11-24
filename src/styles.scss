@@ -48,6 +48,27 @@
   }
 }
 
+@layer components {
+  // Native <dialog>: focus trap, Esc to close and the backdrop come from the browser.
+  dialog {
+    @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 shadow-xl p-0 m-0 max-w-none max-h-none overflow-y-auto;
+  
+    &::backdrop {
+      @apply bg-gray-950/40;
+    }
+  }
+  
+  // Bottom sheet on phones, right-side drawer from sm up.
+  .drawer {
+    @apply fixed inset-x-0 bottom-0 top-auto w-full max-h-[85dvh] rounded-t-xl
+      sm:inset-y-0 sm:right-0 sm:left-auto sm:w-96 sm:max-h-none sm:h-dvh sm:rounded-none sm:border-l sm:border-gray-200 sm:dark:border-gray-800;
+  }
+  
+  .modal {
+    @apply fixed inset-0 m-auto w-[min(28rem,calc(100%-2rem))] h-fit rounded-xl;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     transition: none !important;

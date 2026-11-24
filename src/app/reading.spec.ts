@@ -54,7 +54,7 @@ describe('preferences', () => {
   it('returns defaults when nothing is stored', () => {
     expect(loadPrefs()).toEqual({
       fontSize: 20, highlightWords: 1, wpm: 250, theme: 'auto',
-      mode: 'highlight', focusMode: false, fontFamily: 'sans', lineHeight: 1.75, textWidth: 'medium',
+      mode: 'highlight', focusMode: false, fontFamily: 'sans', lineHeight: 1.75, textWidth: 'medium', highlightColor: 'amber',
     });
   });
 
@@ -64,11 +64,11 @@ describe('preferences', () => {
 
     localStorage.setItem('readster:prefs', JSON.stringify({
       fontSize: 999, highlightWords: -3, wpm: 'x', theme: 'neon',
-      mode: 'x', focusMode: 'yes', fontFamily: 'comic', lineHeight: 9, textWidth: 'huge',
+      mode: 'x', focusMode: 'yes', fontFamily: 'comic', lineHeight: 9, textWidth: 'huge', highlightColor: 'neon',
     }));
     expect(loadPrefs()).toEqual({
       fontSize: 32, highlightWords: 1, wpm: 250, theme: 'auto',
-      mode: 'highlight', focusMode: false, fontFamily: 'sans', lineHeight: 1.75, textWidth: 'medium',
+      mode: 'highlight', focusMode: false, fontFamily: 'sans', lineHeight: 1.75, textWidth: 'medium', highlightColor: 'amber',
     });
   });
 

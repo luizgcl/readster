@@ -2,13 +2,24 @@
   <header class="flex items-center gap-2 font-sans">
     <button type="button" class="btn btn-ghost px-2 -ml-1 shrink-0" aria-label="Voltar à biblioteca" (click)="quitReading.emit()">
       <lucide-icon name="arrow-left" size="20" aria-hidden="true" />
-      Biblioteca
+      <span class="hidden sm:inline">Biblioteca</span>
     </button>
-    <h2 class="min-w-0 truncate text-base sm:text-lg font-semibold" [title]="title()">{{ title() }}</h2>
+    <h1 class="min-w-0 flex-1 truncate text-base sm:text-lg font-semibold" [title]="title()">{{ title() }}</h1>
+    @if (!hideSettings) {
+      <button type="button" class="btn btn-ghost btn-icon hidden sm:inline-flex" aria-label="Atalhos de teclado" title="Atalhos (?)"
+        (click)="openShortcuts()">
+        <lucide-icon name="keyboard" size="20" aria-hidden="true" />
+      </button>
+      <button type="button" class="btn btn-ghost btn-icon" aria-label="Ajustes de leitura" title="Ajustes de leitura"
+        aria-haspopup="dialog" (click)="openSettings()">
+        <lucide-icon name="settings" size="20" aria-hidden="true" />
+      </button>
+    }
   </header>
 
   @if (mode === 'highlight') {
-    <div #textContainer class="overflow-auto reading-box p-1 sm:p-3" [style.fontSize]="fontSize | fontSize" (click)="onTextClick($event)">
+    <div #textContainer class="overflow-auto reading-box p-1 sm:p-3" [attr.data-highlight]="highlightColor"
+      [style.fontSize]="fontSize | fontSize" (click)="onTextClick($event)">
       <div class="mx-auto break-words" [class]="textWidthClass" [style.lineHeight]="lineHeight">
         @for (paragraph of paragraphs(); track paragraph.start) {
           <p class="mb-4 last:mb-0">
@@ -53,11 +64,11 @@
     <div class="flex items-center gap-2" role="group" aria-label="Controles de leitura">
       <button type="button" class="btn btn-secondary btn-icon" aria-label="Voltar ao início" title="Voltar ao início"
         [disabled]="isAtStart" (click)="restart()">
-        <lucide-icon name="skip-back" size="22" aria-hidden="true" />
+        <lucide-icon name="skip-back" size="20" aria-hidden="true" />
       </button>
       <button type="button" class="btn btn-secondary btn-icon" aria-label="Palavras anteriores" title="Palavras anteriores (←)"
         [disabled]="isAtStart" (click)="highlightPreviousWord()">
-        <lucide-icon name="arrow-big-left" size="22" aria-hidden="true" />
+        <lucide-icon name="chevron-left" size="24" aria-hidden="true" />
       </button>
       <button type="button" class="btn btn-primary size-14 rounded-full px-0"
         [attr.aria-label]="playing ? 'Pausar leitura automática' : 'Iniciar leitura automática'"
@@ -67,94 +78,96 @@
       </button>
       <button type="button" class="btn btn-secondary btn-icon" aria-label="Próximas palavras" title="Próximas palavras (→)"
         [disabled]="isAtEnd" (click)="highlightNextWord()">
-        <lucide-icon name="arrow-big-right" size="22" aria-hidden="true" />
+        <lucide-icon name="chevron-right" size="24" aria-hidden="true" />
       </button>
     </div>
 
     @if (!hideSettings) {
-      <div class="flex flex-col items-center gap-1">
-        <label for="wpm" class="text-sm">Velocidade: <strong>{{ wpm }}</strong> palavras/min</label>
-        <input id="wpm" type="range" class="w-56 h-11 accent-brand-500 cursor-pointer"
-          [min]="limits.wpm.min" [max]="limits.wpm.max" [step]="limits.wpm.step"
-          [ngModel]="wpm" (ngModelChange)="onWpmChange($event)" />
-      </div>
-
-      <details class="w-full max-w-2xl rounded-md border border-gray-200 dark:border-gray-700">
-        <summary class="cursor-pointer select-none flex items-center min-h-11 px-3 text-sm font-semibold rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-300">
-          Ajustes de leitura
-        </summary>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 text-sm">
-          <label class="setting">
-            Exibição
-            <select class="field h-11 px-2" [ngModel]="mode" (ngModelChange)="setPref('mode', $event)">
-              @for (option of options.mode; track option) {
-                <option [ngValue]="option">{{ labels[option] }}</option>
-              }
-            </select>
-          </label>
-          <label class="setting">
-            Palavras por vez
-            <select id="highlight-words" class="field h-11 px-2"
-              [ngModel]="highlightWords" (ngModelChange)="onHighlightWordsChange($event)">
-              @for (option of highlightOptions; track option) {
-                <option [ngValue]="option">{{ option }}</option>
-              }
-            </select>
-          </label>
-          <label class="setting">
-            Fonte
-            <select class="field h-11 px-2" [ngModel]="fontFamily" (ngModelChange)="setPref('fontFamily', $event)">
-              @for (option of options.fontFamily; track option) {
-                <option [ngValue]="option">{{ labels[option] }}</option>
-              }
-            </select>
-          </label>
-          <div class="setting">
-            <span id="font-size-label">Tamanho da fonte</span>
-            <div class="flex gap-2" role="group" aria-labelledby="font-size-label">
-              <button type="button" class="btn btn-secondary btn-icon" aria-label="Diminuir fonte" title="Diminuir fonte (−)"
-                [disabled]="fontSize <= limits.fontSize.min" (click)="decreaseFontSize()">
-                <lucide-icon name="a-arrow-down" size="22" aria-hidden="true" />
-              </button>
-              <button type="button" class="btn btn-secondary btn-icon" aria-label="Restaurar tamanho da fonte" title="Restaurar tamanho da fonte"
-                [disabled]="fontSize === limits.fontSize.default" (click)="resetFontSize()">
-                <lucide-icon name="rotate-ccw" size="22" aria-hidden="true" />
-              </button>
-              <button type="button" class="btn btn-secondary btn-icon" aria-label="Aumentar fonte" title="Aumentar fonte (+)"
-                [disabled]="fontSize >= limits.fontSize.max" (click)="increaseFontSize()">
-                <lucide-icon name="a-arrow-up" size="22" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-          @if (mode === 'highlight') {
-            <label class="setting">
-              Entrelinha
-              <select class="field h-11 px-2" [ngModel]="lineHeight" (ngModelChange)="setPref('lineHeight', $event)">
-                @for (option of options.lineHeight; track option) {
-                  <option [ngValue]="option">{{ labels[option.toString()] }}</option>
-                }
-              </select>
-            </label>
-            <label class="setting">
-              Largura do texto
-              <select class="field h-11 px-2" [ngModel]="textWidth" (ngModelChange)="setPref('textWidth', $event)">
-                @for (option of options.textWidth; track option) {
-                  <option [ngValue]="option">{{ labels[option] }}</option>
-                }
-              </select>
-            </label>
-          }
-          <label class="flex items-center gap-2 sm:col-span-2">
-            <input type="checkbox" class="size-5 accent-brand-500" [ngModel]="focusMode" (ngModelChange)="setPref('focusMode', $event)" />
-            Modo foco: esconder ajustes durante a leitura automática
-          </label>
+      <div class="flex flex-col items-center gap-1 w-full max-w-sm">
+        <label for="wpm" class="text-sm">Velocidade: <strong class="tabular-nums">{{ wpm }}</strong> palavras/min</label>
+        <div class="flex items-center gap-2 w-full">
+          <button type="button" class="btn btn-ghost btn-icon shrink-0" aria-label="Diminuir velocidade" title="Mais devagar (↓)"
+            [disabled]="wpm <= limits.wpm.min" (click)="changeWpm(-limits.wpm.step)">
+            <lucide-icon name="minus" size="18" aria-hidden="true" />
+          </button>
+          <input id="wpm" type="range" class="flex-1 h-11 accent-brand-500 cursor-pointer"
+            [min]="limits.wpm.min" [max]="limits.wpm.max" [step]="limits.wpm.step"
+            [ngModel]="wpm" (ngModelChange)="onWpmChange($event)" />
+          <button type="button" class="btn btn-ghost btn-icon shrink-0" aria-label="Aumentar velocidade" title="Mais rápido (↑)"
+            [disabled]="wpm >= limits.wpm.max" (click)="changeWpm(limits.wpm.step)">
+            <lucide-icon name="plus" size="18" aria-hidden="true" />
+          </button>
         </div>
-      </details>
-
-      <p class="hidden sm:block text-xs text-gray-600 dark:text-gray-400">
-        Atalhos: <kbd>Espaço</kbd> iniciar/pausar · <kbd>←</kbd> <kbd>→</kbd> navegar · <kbd>+</kbd> <kbd>−</kbd> fonte · <kbd>F</kbd> modo foco
-        @if (mode === 'highlight') { · clique numa palavra para ir até ela }
-      </p>
+      </div>
     }
   </footer>
 </div>
+
+<!-- Settings: side drawer on wide screens, bottom sheet on phones (see .drawer). -->
+<dialog #settingsDialog class="drawer font-sans" aria-labelledby="settings-title" (click)="closeOnBackdrop($event)">
+  <div class="flex flex-col gap-4 p-4">
+    <div class="flex items-center justify-between gap-2">
+      <h2 id="settings-title" class="text-lg font-semibold">Ajustes de leitura</h2>
+      <button type="button" class="btn btn-ghost btn-icon -mr-2" aria-label="Fechar ajustes" (click)="settingsDialog.close()">
+        <lucide-icon name="x" size="20" aria-hidden="true" />
+      </button>
+    </div>
+
+    <app-segmented name="mode" label="Exibição" [options]="modeOptions" [value]="mode" (valueChange)="setPref('mode', $event)" />
+    <app-stepper name="highlight-words" label="Palavras por vez" [value]="highlightWords"
+      [min]="limits.highlightWords.min" [max]="limits.highlightWords.max" [defaultValue]="limits.highlightWords.default"
+      (valueChange)="onHighlightWordsChange($event)" />
+    <app-stepper name="font-size" label="Tamanho da fonte" unit="px" [value]="fontSize"
+      [min]="limits.fontSize.min" [max]="limits.fontSize.max" [step]="limits.fontSize.step" [defaultValue]="limits.fontSize.default"
+      (valueChange)="setFontSize($event)" />
+    <app-segmented name="font-family" label="Fonte" [options]="fontFamilyOptions" [value]="fontFamily" (valueChange)="setPref('fontFamily', $event)" />
+
+    @if (mode === 'highlight') {
+      <app-segmented name="line-height" label="Entrelinha" [options]="lineHeightOptions" [value]="lineHeight" (valueChange)="setPref('lineHeight', $event)" />
+      <app-segmented name="text-width" label="Largura do texto" [options]="textWidthOptions" [value]="textWidth" (valueChange)="setPref('textWidth', $event)" />
+
+      <div class="flex flex-col gap-1">
+        <span id="highlight-color-label" class="text-sm font-medium">Destaque</span>
+        <div class="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="highlight-color-label">
+          @for (option of highlightColorOptions; track option.value) {
+            <label class="cursor-pointer" [title]="option.label">
+              <input type="radio" name="highlight-color" class="peer sr-only" [checked]="option.value === highlightColor"
+                [attr.aria-label]="option.label" (change)="setPref('highlightColor', option.value)" />
+              <span class="swatch flex size-11 items-center justify-center rounded-md border-2 border-transparent text-sm
+                peer-checked:border-brand-500 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-600 dark:peer-focus-visible:ring-brand-300"
+                [attr.data-highlight]="option.value">
+                <span class="highlight px-1">Aa</span>
+              </span>
+            </label>
+          }
+        </div>
+      </div>
+    }
+
+    <label class="flex items-center gap-3 min-h-11 cursor-pointer">
+      <input type="checkbox" class="size-5 accent-brand-500" [ngModel]="focusMode" (ngModelChange)="setPref('focusMode', $event)" />
+      <span>Modo foco: esconder ajustes durante a leitura automática</span>
+    </label>
+  </div>
+</dialog>
+
+<dialog #shortcutsDialog class="modal font-sans" aria-labelledby="shortcuts-title" (click)="closeOnBackdrop($event)">
+  <div class="flex flex-col gap-3 p-4">
+    <div class="flex items-center justify-between gap-2">
+      <h2 id="shortcuts-title" class="text-lg font-semibold">Atalhos de teclado</h2>
+      <button type="button" class="btn btn-ghost btn-icon -mr-2" aria-label="Fechar atalhos" (click)="shortcutsDialog.close()">
+        <lucide-icon name="x" size="20" aria-hidden="true" />
+      </button>
+    </div>
+    <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+      <dt><kbd>Espaço</kbd></dt><dd>Iniciar ou pausar</dd>
+      <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Palavras anteriores / próximas</dd>
+      <dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Mais rápido / mais devagar</dd>
+      <dt><kbd>+</kbd> <kbd>−</kbd></dt><dd>Aumentar / diminuir a fonte</dd>
+      <dt><kbd>F</kbd></dt><dd>Modo foco</dd>
+      <dt><kbd>?</kbd></dt><dd>Mostrar estes atalhos</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Fechar janelas</dd>
+    </dl>
+    <p class="text-sm text-gray-700 dark:text-gray-300">No modo texto completo, clique numa palavra para ir até ela.</p>
+  </div>
+</dialog>

@@ -33,7 +33,7 @@ describe('ReaderComponent', () => {
   /** Saved position of the text currently open in the reader. */
   const savedIndex = () => loadLibrary().find(item => item.text === component.text())?.index;
 
-  const highlighted = () => Array.from(el.querySelectorAll('.highlight')).map(e => e.textContent);
+  const highlighted = () => Array.from(el.querySelectorAll('.word.highlight')).map(e => e.textContent);
   const button = (label: string) => el.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   const key = (k: string, target: EventTarget = document.body) =>
     target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
@@ -241,7 +241,7 @@ describe('ReaderComponent', () => {
     });
 
     it('focus mode hides settings only while playing, toggled with F', fakeAsync(() => {
-      const settings = () => el.querySelector('details');
+      const settings = () => el.querySelector('[aria-label="Ajustes de leitura"]');
       key('f');
       fixture.detectChanges();
       expect(component.focusMode).toBeTrue();
@@ -265,7 +265,7 @@ describe('ReaderComponent', () => {
       const rsvp = el.querySelector('.rsvp')!;
       expect(rsvp.getAttribute('aria-label')).toBe('dois');
       expect(Array.from(rsvp.children).map(c => c.textContent)).toEqual(['d', 'o', 'is']);
-      expect(el.querySelector('.highlight')).toBeNull();
+      expect(el.querySelector('.word.highlight')).toBeNull();
 
       component.onHighlightWordsChange(2);
       fixture.detectChanges();
@@ -301,21 +301,73 @@ describe('ReaderComponent', () => {
     });
   });
 
-  it('changes font size from the buttons within limits', () => {
-    button('Aumentar fonte').click();
-    expect(component.fontSize).toBe(24);
+  describe('settings and speed', () => {
+    it('opens the settings drawer and changes font size with a visible value', () => {
+      button('Ajustes de leitura').click();
+      fixture.detectChanges();
+      expect(el.querySelector<HTMLDialogElement>('dialog.drawer')!.open).toBeTrue();
+      const value = el.querySelector<HTMLButtonElement>('#font-size')!;
+      expect(value.textContent?.trim()).toBe('20 px');
+      expect(value.disabled).withContext('already the default').toBeTrue();
 
-    for (let i = 0; i < 10; i++) component.increaseFontSize();
-    fixture.detectChanges();
-    expect(component.fontSize).toBe(32);
-    expect(button('Aumentar fonte').disabled).toBeTrue();
+      button('Aumentar tamanho da fonte').click();
+      fixture.detectChanges();
+      expect(component.fontSize).toBe(24);
+      expect(value.textContent?.trim()).toBe('24 px');
 
-    button('Restaurar tamanho da fonte').click();
-    expect(component.fontSize).toBe(20);
+      value.click(); // clicking the value restores the default
+      fixture.detectChanges();
+      expect(component.fontSize).toBe(20);
 
-    for (let i = 0; i < 10; i++) component.decreaseFontSize();
-    fixture.detectChanges();
-    expect(component.fontSize).toBe(12);
-    expect(button('Diminuir fonte').disabled).toBeTrue();
+      for (let i = 0; i < 10; i++) {
+        button('Diminuir tamanho da fonte').click();
+        fixture.detectChanges();
+      }
+      fixture.detectChanges();
+      expect(component.fontSize).toBe(12);
+      expect(button('Diminuir tamanho da fonte').disabled).toBeTrue();
+      el.querySelector<HTMLDialogElement>('dialog.drawer')!.close();
+    });
+
+    it('changes words per step with a stepper and display mode with side-by-side options', () => {
+      button('Aumentar palavras por vez').click();
+      fixture.detectChanges();
+      expect(highlighted()).toEqual(['um', 'dois']);
+      expect(el.querySelector('#highlight-words')?.textContent?.trim()).toBe('2');
+
+      const rsvp = Array.from(el.querySelectorAll<HTMLInputElement>('input[name="mode"]'))[1];
+      rsvp.click();
+      fixture.detectChanges();
+      expect(component.mode).toBe('rsvp');
+      expect(loadPrefs()).toEqual(jasmine.objectContaining({ mode: 'rsvp', highlightWords: 2 }));
+    });
+
+    it('changes the highlight color', () => {
+      const box = () => el.querySelector<HTMLElement>('[data-i="0"]')!.closest<HTMLElement>('[data-highlight]')!;
+      expect(box().dataset['highlight']).toBe('amber');
+      el.querySelector<HTMLInputElement>('input[name="highlight-color"][aria-label="Verde"]')!.click();
+      fixture.detectChanges();
+      expect(box().dataset['highlight']).toBe('green');
+      expect(loadPrefs().highlightColor).toBe('green');
+    });
+
+    it('changes speed with - and + and with the up and down arrows', () => {
+      button('Aumentar velocidade').click();
+      expect(component.wpm).toBe(275);
+      button('Diminuir velocidade').click();
+      button('Diminuir velocidade').click();
+      expect(component.wpm).toBe(225);
+      key('ArrowUp');
+      expect(component.wpm).toBe(250);
+      key('ArrowDown');
+      expect(component.wpm).toBe(225);
+      expect(loadPrefs().wpm).toBe(225);
+    });
+
+    it('shows the keyboard shortcuts with ?', () => {
+      key('?');
+      expect(el.querySelector<HTMLDialogElement>('dialog.modal')!.open).toBeTrue();
+      el.querySelector<HTMLDialogElement>('dialog.modal')!.close();
+    });
   });
 });

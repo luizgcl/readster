@@ -3,11 +3,13 @@ import {
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { FontSizePipe } from '../../pipes/font-size.pipe';
+import { StepperComponent } from '../stepper/stepper.component';
+import { SegmentedComponent, SegmentOption } from '../segmented/segmented.component';
 import { FormsModule } from '@angular/forms';
 import { chunkDelayMs, formatReadingTime, splitAtPivot, tokenize } from '../../reading';
 import { addReadingStats, LIMITS, loadPrefs, OPTIONS, Prefs, savePrefs, titleFor, updateProgress } from '../../preferences';
 
-type ReaderPref = 'fontSize' | 'highlightWords' | 'wpm' | 'mode' | 'focusMode' | 'fontFamily' | 'lineHeight' | 'textWidth';
+type ReaderPref = 'fontSize' | 'highlightWords' | 'wpm' | 'mode' | 'focusMode' | 'fontFamily' | 'lineHeight' | 'textWidth' | 'highlightColor';
 
 /** A chunk shown longer than this was not being read (reader away), so it is left out of the stats. */
 const MAX_CHUNK_MS = 30_000;
@@ -20,7 +22,7 @@ const TEXT_WIDTH_CLASS: Record<Prefs['textWidth'], string> = {
 
 @Component({
   selector: 'app-reader',
-  imports: [LucideAngularModule, FontSizePipe, FormsModule],
+  imports: [LucideAngularModule, FontSizePipe, FormsModule, StepperComponent, SegmentedComponent],
   templateUrl: './reader.component.html',
   styleUrl: './reader.component.scss',
   host: {
@@ -34,6 +36,8 @@ export class ReaderComponent implements OnInit {
   private injector = inject(Injector);
   // Absent in RSVP mode.
   private textContainer = viewChild<ElementRef<HTMLElement>>('textContainer');
+  private settingsDialog = viewChild<ElementRef<HTMLDialogElement>>('settingsDialog');
+  private shortcutsDialog = viewChild<ElementRef<HTMLDialogElement>>('shortcutsDialog');
 
   text = input.required<string>();
   /** Word index to resume from. */
@@ -49,19 +53,31 @@ export class ReaderComponent implements OnInit {
 
   readonly limits = LIMITS;
   readonly options = OPTIONS;
-  readonly labels: Record<string, string> = {
-    highlight: 'Texto completo',
-    rsvp: 'Palavra a palavra',
-    sans: 'Sem serifa',
-    serif: 'Com serifa',
-    '1.5': 'Compacta',
-    '1.75': 'Normal',
-    '2': 'Ampla',
-    narrow: 'Estreita',
-    medium: 'Média',
-    wide: 'Larga',
-  };
-  readonly highlightOptions = Array.from({ length: LIMITS.highlightWords.max }, (_, i) => i + 1);
+  readonly modeOptions: SegmentOption<Prefs['mode']>[] = [
+    { value: 'highlight', label: 'Texto completo' },
+    { value: 'rsvp', label: 'Palavra a palavra' },
+  ];
+  readonly fontFamilyOptions: SegmentOption<Prefs['fontFamily']>[] = [
+    { value: 'sans', label: 'Sem serifa' },
+    { value: 'serif', label: 'Com serifa' },
+  ];
+  readonly lineHeightOptions: SegmentOption<number>[] = [
+    { value: 1.5, label: 'Compacta' },
+    { value: 1.75, label: 'Normal' },
+    { value: 2, label: 'Ampla' },
+  ];
+  readonly textWidthOptions: SegmentOption<Prefs['textWidth']>[] = [
+    { value: 'narrow', label: 'Estreita' },
+    { value: 'medium', label: 'Média' },
+    { value: 'wide', label: 'Larga' },
+  ];
+  readonly highlightColorOptions: { value: Prefs['highlightColor']; label: string }[] = [
+    { value: 'amber', label: 'Amarelo' },
+    { value: 'green', label: 'Verde' },
+    { value: 'blue', label: 'Azul' },
+    { value: 'pink', label: 'Rosa' },
+    { value: 'underline', label: 'Sublinhado' },
+  ];
 
   private prefs = loadPrefs();
   fontSize = this.prefs.fontSize;
@@ -72,6 +88,7 @@ export class ReaderComponent implements OnInit {
   fontFamily = this.prefs.fontFamily;
   lineHeight = this.prefs.lineHeight;
   textWidth = this.prefs.textWidth;
+  highlightColor = this.prefs.highlightColor;
 
   highlightedIndex = 0;
   playing = false;
@@ -254,7 +271,7 @@ export class ReaderComponent implements OnInit {
     this.setFontSize(this.fontSize - LIMITS.fontSize.step);
   }
 
-  private setFontSize(size: number): void {
+  setFontSize(size: number): void {
     this.setPref('fontSize', Math.min(LIMITS.fontSize.max, Math.max(LIMITS.fontSize.min, size)));
   }
 
@@ -264,6 +281,25 @@ export class ReaderComponent implements OnInit {
 
   onWpmChange(value: number): void {
     this.setPref('wpm', value);
+  }
+
+  changeWpm(delta: number): void {
+    const { min, max } = LIMITS.wpm;
+    this.onWpmChange(Math.min(max, Math.max(min, this.wpm + delta)));
+  }
+
+  openSettings(): void {
+    this.settingsDialog()?.nativeElement.showModal();
+  }
+
+  openShortcuts(): void {
+    this.shortcutsDialog()?.nativeElement.showModal();
+  }
+
+  /** Closes a dialog when the click lands on its backdrop (the dialog element itself). */
+  closeOnBackdrop(event: MouseEvent): void {
+    const dialog = event.target as HTMLElement;
+    if (dialog instanceof HTMLDialogElement) dialog.close();
   }
 
   /** Updates a reader preference and persists it. */
@@ -304,6 +340,15 @@ export class ReaderComponent implements OnInit {
       case 'f':
       case 'F':
         this.setPref('focusMode', !this.focusMode);
+        break;
+      case 'ArrowUp':
+        this.changeWpm(LIMITS.wpm.step);
+        break;
+      case 'ArrowDown':
+        this.changeWpm(-LIMITS.wpm.step);
+        break;
+      case '?':
+        this.openShortcuts();
         break;
       default:
         return;
