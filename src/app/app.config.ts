@@ -1,14 +1,18 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
-
-import { routes } from './app.routes';
 import { provideClientHydration } from '@angular/platform-browser';
-import { icons, LUCIDE_ICONS, LucideIconProvider } from 'lucide-angular';
+import {
+  AArrowDown, AArrowUp, ArrowBigLeft, ArrowBigRight, LUCIDE_ICONS, LucideIconProvider,
+  Monitor, Moon, Pause, Play, RotateCcw, SkipBack, Sun, X,
+} from 'lucide-angular';
+
+// Register only the icons in use; registering the full set added ~250 kB to the bundle.
+const icons = {
+  AArrowDown, AArrowUp, ArrowBigLeft, ArrowBigRight, Monitor, Moon, Pause, Play, RotateCcw, SkipBack, Sun, X,
+};
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }), 
-    provideRouter(routes), 
+    provideZoneChangeDetection({ eventCoalescing: true }),
     provideClientHydration(),
     { provide: LUCIDE_ICONS, multi: true, useValue: new LucideIconProvider(icons) }
   ]

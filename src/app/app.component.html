@@ -1,29 +1,67 @@
-<main class="min-h-dvh w-full bg-gray-100 flex flex-col">
-  <nav class="bg-white w-full px-4 py-2 shadow-lg h-14 flex items-center">
+<main class="min-h-dvh w-full bg-gray-100 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex flex-col">
+  <nav class="bg-white dark:bg-gray-900 w-full px-4 py-2 shadow-lg dark:shadow-none dark:border-b dark:border-gray-800 h-14 flex items-center justify-between">
     <h1 class="font-bold text-3xl">Readster</h1>
+    <button type="button"
+      class="rounded-md p-2 hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 dark:focus-visible:ring-blue-400"
+      [attr.aria-label]="'Tema: ' + themeInfo.label + '. Clique para alternar.'"
+      [title]="'Tema: ' + themeInfo.label"
+      (click)="cycleTheme()">
+      <lucide-icon [name]="themeInfo.icon" aria-hidden="true" />
+    </button>
   </nav>
-  <section class="flex flex-col flex-1 items-center justify-center px-4 py-6">
+  <section class="flex flex-col flex-1 items-center justify-center px-4 py-6 gap-4">
     @if (isReaderMode) {
-      <app-reader [text]="form.value.text" (quitReading)="handleQuitReading()"></app-reader>
+      <app-reader [text]="form.value.text" [startIndex]="startIndex" (quitReading)="handleQuitReading()"></app-reader>
     } @else {
+      @if (savedSession(); as session) {
+        <div class="card w-full max-w-3xl p-4 flex flex-wrap items-center justify-between gap-3" role="region" aria-label="Leitura em andamento">
+          <p>Você tem uma leitura em andamento ({{ session.percent }}% lida).</p>
+          <div class="flex gap-2">
+            <button type="button"
+              class="flex items-center gap-1 rounded-md bg-blue-600 text-white px-3 py-2 hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-700"
+              (click)="continueReading()">
+              <lucide-icon name="play" size="18" aria-hidden="true" />
+              Continuar
+            </button>
+            <button type="button"
+              class="rounded-md px-3 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+              (click)="discardSession()">
+              Descartar
+            </button>
+          </div>
+        </div>
+      }
       <form [formGroup]="form" (ngSubmit)="onSubmit()"
-        class="flex flex-col bg-white rounded-md p-4 gap-3 shadow-lg w-full max-w-3xl">
-        <label for="text" class="text-xl">Deixe seu texto abaixo para ler de uma maneira descomplicada</label>
+        class="card flex flex-col p-4 gap-3 w-full max-w-3xl">
+        <div>
+          <label for="text" class="text-xl font-semibold">Cole um texto e leia no seu ritmo</label>
+          <p class="text-gray-700 dark:text-gray-300 mt-1">
+            O Readster destaca as palavras uma a uma ou em grupos, avança sozinho na velocidade que você escolher
+            e deixa a fonte do seu jeito. Seu texto fica apenas no seu navegador.
+          </p>
+        </div>
         <textarea
           id="text"
-          class="border border-gray-300 rounded-md p-2 min-h-[50dvh] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+          class="field p-2 min-h-[45dvh]"
           placeholder="Insira aqui o texto que deseja ler com facilidade"
           formControlName="text"
           [attr.aria-invalid]="showTextError"
-          aria-describedby="text-error"></textarea>
-        <p id="text-error" class="text-red-700 text-sm" aria-live="polite">
-          @if (showTextError) {
-            Insira algum texto para iniciar a leitura.
-          }
-        </p>
+          aria-describedby="text-error text-stats"></textarea>
+        <div class="flex justify-between gap-2 text-sm">
+          <p id="text-error" class="text-red-700 dark:text-red-400" aria-live="polite">
+            @if (showTextError) {
+              Insira algum texto para iniciar a leitura.
+            }
+          </p>
+          <p id="text-stats" class="text-gray-700 dark:text-gray-300">
+            @if (wordCount) {
+              {{ wordCount }} palavras · {{ readingTime }} a {{ wpm() }} palavras/min
+            }
+          </p>
+        </div>
         <button
           type="submit"
-          class="flex justify-center items-center gap-2 bg-blue-300 px-4 py-2 rounded-md uppercase hover:bg-blue-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-700">
+          class="flex justify-center items-center gap-2 bg-blue-300 text-gray-900 px-4 py-2 rounded-md uppercase hover:bg-blue-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-700">
           <lucide-icon name="play" aria-hidden="true" />
           Iniciar Leitura
         </button>

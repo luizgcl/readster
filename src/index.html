@@ -5,7 +5,17 @@
   <title>Readster | Leitura descomplicada</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Cole um texto e leia no seu ritmo: destaque de palavras, leitura automática com velocidade ajustável e fonte personalizável. Seu texto fica apenas no seu navegador.">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- Apply the saved theme before first paint to avoid a light flash; kept in sync with AppComponent.applyTheme -->
+  <script>
+    try {
+      var theme = (JSON.parse(localStorage.getItem('readster:prefs')) || {}).theme;
+      var dark = theme === 'dark' || (theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <app-root></app-root>
