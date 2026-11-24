@@ -11,25 +11,45 @@
   </nav>
   <section class="flex flex-col flex-1 items-center justify-center px-4 py-6 gap-4">
     @if (isReaderMode) {
-      <app-reader [text]="form.value.text" [startIndex]="startIndex" (quitReading)="handleQuitReading()"></app-reader>
+      @if (storageWarning) {
+        <p class="w-full max-w-3xl text-sm rounded-md p-2 bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100" role="status">
+          Não foi possível salvar este texto no navegador (o espaço pode estar cheio). Você pode ler normalmente, mas o progresso não será guardado.
+        </p>
+      }
+      <app-reader [text]="form.value.text" [startIndex]="startIndex" [itemId]="itemId" (quitReading)="handleQuitReading()"></app-reader>
     } @else {
-      @if (savedSession(); as session) {
-        <div class="card w-full max-w-3xl p-4 flex flex-wrap items-center justify-between gap-3" role="region" aria-label="Leitura em andamento">
-          <p>Você tem uma leitura em andamento ({{ session.percent }}% lida).</p>
-          <div class="flex gap-2">
-            <button type="button"
-              class="flex items-center gap-1 rounded-md bg-blue-600 text-white px-3 py-2 hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-700"
-              (click)="continueReading()">
-              <lucide-icon name="play" size="18" aria-hidden="true" />
-              Continuar
-            </button>
-            <button type="button"
-              class="rounded-md px-3 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
-              (click)="discardSession()">
-              Descartar
-            </button>
-          </div>
-        </div>
+      @if (library().length) {
+        <section class="card w-full max-w-3xl p-4" aria-labelledby="library-title">
+          <h2 id="library-title" class="text-lg font-semibold mb-2">Sua biblioteca</h2>
+          <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+            @for (item of library(); track item.id) {
+              <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+                <div class="min-w-0 flex-1">
+                  <p class="truncate font-medium" [title]="item.title">{{ item.title }}</p>
+                  <p class="text-sm text-gray-700 dark:text-gray-300">
+                    {{ percentRead(item) === 100 ? 'Concluído' : percentRead(item) + '% lido' }}
+                    · {{ item.words }} palavras · {{ formatDate(item.updatedAt) }}
+                  </p>
+                </div>
+                <div class="flex gap-2">
+                  <button type="button"
+                    class="flex items-center gap-1 rounded-md bg-blue-600 text-white px-3 py-2 hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-700"
+                    [attr.aria-label]="(percentRead(item) === 100 ? 'Ler de novo: ' : 'Continuar: ') + item.title"
+                    (click)="openItem(item)">
+                    <lucide-icon name="play" size="18" aria-hidden="true" />
+                    {{ percentRead(item) === 100 ? 'Ler de novo' : 'Continuar' }}
+                  </button>
+                  <button type="button"
+                    class="rounded-md p-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+                    [attr.aria-label]="'Excluir: ' + item.title" title="Excluir"
+                    (click)="removeItem(item)">
+                    <lucide-icon name="trash-2" size="18" aria-hidden="true" />
+                  </button>
+                </div>
+              </li>
+            }
+          </ul>
+        </section>
       }
       <form [formGroup]="form" (ngSubmit)="onSubmit()"
         class="card flex flex-col p-4 gap-3 w-full max-w-3xl">
@@ -37,8 +57,16 @@
           <label for="text" class="text-xl font-semibold">Cole um texto e leia no seu ritmo</label>
           <p class="text-gray-700 dark:text-gray-300 mt-1">
             O Readster destaca as palavras uma a uma ou em grupos, avança sozinho na velocidade que você escolher
-            e deixa a fonte do seu jeito. Seu texto fica apenas no seu navegador.
+            e deixa a fonte do seu jeito. Seus textos ficam salvos apenas no seu navegador.
           </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="flex items-center gap-1 cursor-pointer rounded-md px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-within:ring-2 focus-within:ring-blue-700">
+            <lucide-icon name="file-text" size="18" aria-hidden="true" />
+            Abrir arquivo .txt
+            <input type="file" accept=".txt,.md,text/plain" class="sr-only" (change)="onFileSelected($event)" />
+          </label>
+          <p class="text-sm text-red-700 dark:text-red-400" role="alert">{{ importError }}</p>
         </div>
         <textarea
           id="text"

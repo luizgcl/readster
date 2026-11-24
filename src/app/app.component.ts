@@ -4,7 +4,11 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ReaderComponent } from './components/reader/reader.component';
 import { LucideAngularModule } from 'lucide-angular';
 import { countWords, formatReadingTime } from './reading';
-import { LIMITS, loadPrefs, loadSession, savePrefs, saveSession, Session, Theme } from './preferences';
+import {
+  addToLibrary, LibraryItem, LIMITS, loadLibrary, loadPrefs, removeFromLibrary, savePrefs, Theme,
+} from './preferences';
+
+const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 
 const THEME_ORDER: Theme[] = ['auto', 'light', 'dark'];
 const THEME_INFO: Record<Theme, { icon: string; label: string }> = {
@@ -27,9 +31,13 @@ export class AppComponent {
 
   isReaderMode = false;
   startIndex = 0;
+  itemId: string | null = null;
+  /** Shown when the text could not be saved (e.g. storage full); reading still works. */
+  storageWarning = false;
+  importError = '';
 
   // Browser-only state, filled after hydration so it never mismatches the server render.
-  savedSession = signal<(Session & { percent: number }) | null>(null);
+  library = signal<LibraryItem[]>([]);
   theme = signal<Theme>('auto');
   wpm = signal<number>(LIMITS.wpm.default);
 
@@ -44,7 +52,7 @@ export class AppComponent {
       const prefs = loadPrefs();
       this.theme.set(prefs.theme);
       this.wpm.set(prefs.wpm);
-      this.refreshSavedSession();
+      this.library.set(loadLibrary());
 
       const media = window.matchMedia?.('(prefers-color-scheme: dark)');
       const onSystemChange = () => this.applyTheme();
@@ -77,28 +85,67 @@ export class AppComponent {
       return;
     }
 
-    this.startIndex = 0;
-    this.isReaderMode = true;
+    const item = addToLibrary(this.form.value.text);
+    this.storageWarning = !item;
+    this.open(this.form.value.text, item?.index ?? 0, item?.id ?? null);
   }
 
-  continueReading() {
-    const session = this.savedSession();
-    if (!session) return;
-    this.form.setValue({ text: session.text });
-    this.startIndex = session.index;
-    this.isReaderMode = true;
+  openItem(item: LibraryItem) {
+    // A finished text starts over; anything else resumes where it stopped.
+    this.open(item.text, item.index >= item.words ? 0 : item.index, item.id);
   }
 
-  discardSession() {
-    saveSession(null);
-    this.savedSession.set(null);
+  removeItem(item: LibraryItem) {
+    if (confirm(`Excluir "${item.title}" da biblioteca? Esta ação não pode ser desfeita.`)) {
+      removeFromLibrary(item.id);
+      this.library.set(loadLibrary());
+    }
+  }
+
+  percentRead(item: LibraryItem): number {
+    return item.words ? Math.round((Math.min(item.index, item.words) / item.words) * 100) : 0;
+  }
+
+  formatDate(timestamp: number): string {
+    return new Date(timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  }
+
+  async onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // allow picking the same file again
+    this.importError = '';
+    if (!file) return;
+    if (!(file.type.startsWith('text/') || /\.(txt|md)$/i.test(file.name))) {
+      this.importError = 'Formato não suportado. Escolha um arquivo .txt.';
+      return;
+    }
+    if (file.size > MAX_IMPORT_BYTES) {
+      this.importError = 'Arquivo muito grande. O limite é 5 MB.';
+      return;
+    }
+    // ponytail: decodes as UTF-8 only; files in other encodings (e.g. Latin-1) show garbled accents.
+    const text = await file.text();
+    if (!text.trim()) {
+      this.importError = 'O arquivo está vazio.';
+      return;
+    }
+    this.form.setValue({ text });
   }
 
   handleQuitReading() {
     this.isReaderMode = false
+    this.storageWarning = false;
     this.form.reset()
     this.wpm.set(loadPrefs().wpm);
-    this.refreshSavedSession();
+    this.library.set(loadLibrary());
+  }
+
+  private open(text: string, startIndex: number, itemId: string | null) {
+    this.form.setValue({ text });
+    this.startIndex = startIndex;
+    this.itemId = itemId;
+    this.isReaderMode = true;
   }
 
   cycleTheme() {
@@ -106,14 +153,6 @@ export class AppComponent {
     this.theme.set(next);
     savePrefs({ theme: next });
     this.applyTheme();
-  }
-
-  private refreshSavedSession() {
-    const session = loadSession();
-    const total = session ? countWords(session.text) : 0;
-    this.savedSession.set(session && total
-      ? { ...session, percent: Math.round((Math.min(session.index, total) / total) * 100) }
-      : null);
   }
 
   // Mirrors the inline script in index.html, which applies the theme before first paint.
