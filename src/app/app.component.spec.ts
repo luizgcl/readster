@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { ThemeToggleComponent } from './components/theme-toggle.component';
+import { ContributorsComponent } from './components/contributors.component';
 import { ConfirmDialogComponent, ConfirmService } from './components/confirm-dialog.component';
 import { LandingPage } from './pages/landing.page';
 import { appConfig } from './app.config';
@@ -36,6 +37,33 @@ describe('ThemeToggleComponent', () => {
     expect(toggle.theme()).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBeTrue();
     expect(loadPrefs().theme).toBe('dark');
+  });
+});
+
+describe('ContributorsComponent', () => {
+  it('lists people from GitHub, skipping bots', async () => {
+    spyOn(window, 'fetch').and.resolveTo(new Response(JSON.stringify([
+      { login: 'luizgcl', avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4', html_url: 'https://github.com/luizgcl', contributions: 30, type: 'User' },
+      { login: 'dependabot[bot]', avatar_url: 'x', html_url: 'x', contributions: 2, type: 'Bot' },
+    ])));
+    const fixture = TestBed.createComponent(ContributorsComponent);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    await new Promise(resolve => setTimeout(resolve));
+    await fixture.whenStable();
+    const links = fixture.nativeElement.querySelectorAll('li a');
+    expect(links.length).toBe(1);
+    expect(links[0].textContent).toContain('luizgcl');
+  });
+
+  it('falls back to a link when GitHub cannot be reached', async () => {
+    spyOn(window, 'fetch').and.rejectWith(new TypeError('offline'));
+    const fixture = TestBed.createComponent(ContributorsComponent);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    await new Promise(resolve => setTimeout(resolve));
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe('https://github.com/luizgcl/readster/graphs/contributors');
   });
 });
 
@@ -296,6 +324,12 @@ describe('screens', () => {
         expect(el.querySelector('#' + id)).withContext(id).toBeTruthy();
       }
       expect(el.querySelector('#perguntas')?.textContent).toContain('Não prometemos isso');
+
+      const github = el.querySelector<HTMLAnchorElement>('header a[href="https://github.com/luizgcl/readster"]')!;
+      expect(github.target).toBe('_blank');
+      expect(github.rel).toContain('noopener');
+      expect(el.querySelector('#codigo-aberto')?.textContent).toContain('licença MIT');
+      expect(el.querySelector('#codigo-aberto a[href$="/issues/new"]')).toBeTruthy();
     });
 
     it('tells search engines what to index, with canonical URL and structured data', async () => {
