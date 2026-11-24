@@ -5,9 +5,12 @@ import { LucideAngularModule } from 'lucide-angular';
 import { FontSizePipe } from '../../pipes/font-size.pipe';
 import { FormsModule } from '@angular/forms';
 import { chunkDelayMs, formatReadingTime, splitAtPivot, tokenize } from '../../reading';
-import { LIMITS, loadPrefs, OPTIONS, Prefs, savePrefs, updateProgress } from '../../preferences';
+import { addReadingStats, LIMITS, loadPrefs, OPTIONS, Prefs, savePrefs, updateProgress } from '../../preferences';
 
 type ReaderPref = 'fontSize' | 'highlightWords' | 'wpm' | 'mode' | 'focusMode' | 'fontFamily' | 'lineHeight' | 'textWidth';
+
+/** A chunk shown longer than this was not being read (reader away), so it is left out of the stats. */
+const MAX_CHUNK_MS = 30_000;
 
 const TEXT_WIDTH_CLASS: Record<Prefs['textWidth'], string> = {
   narrow: 'max-w-[55ch]',
@@ -73,6 +76,8 @@ export class ReaderComponent implements OnInit {
   playing = false;
   completed = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
+  /** When the current chunk appeared; 0 while paused, so paused time is never counted. */
+  private shownAt = 0;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
@@ -153,6 +158,7 @@ export class ReaderComponent implements OnInit {
 
   highlightNextWord(): void {
     if (!this.isAtEnd) {
+      this.recordReading();
       this.goTo(this.highlightedIndex + this.highlightWords);
     }
   }
@@ -163,6 +169,7 @@ export class ReaderComponent implements OnInit {
 
   private goTo(index: number): void {
     this.highlightedIndex = index;
+    this.shownAt = Date.now();
     this.completed = false;
     this.saveProgress(index);
     this.scrollToHighlightedWord();
@@ -186,12 +193,14 @@ export class ReaderComponent implements OnInit {
     if (this.isAtEnd) {
       this.goTo(0); // also schedules
     } else {
+      this.shownAt = Date.now();
       this.scheduleNextStep();
     }
   }
 
   pause(): void {
     this.playing = false;
+    this.shownAt = 0;
     clearTimeout(this.timer);
   }
 
@@ -209,9 +218,18 @@ export class ReaderComponent implements OnInit {
   }
 
   private finish(): void {
+    this.recordReading();
     this.pause();
     this.completed = true;
     this.saveProgress(this.words().length); // 100% in the library
+  }
+
+  /** Counts the chunk being left as read, if it was on screen for a plausible time. */
+  private recordReading(): void {
+    const elapsed = this.shownAt ? Date.now() - this.shownAt : 0;
+    if (elapsed > 0 && elapsed <= MAX_CHUNK_MS) {
+      addReadingStats(Math.min(this.highlightWords, this.words().length - this.highlightedIndex), elapsed);
+    }
   }
 
   private saveProgress(index: number): void {

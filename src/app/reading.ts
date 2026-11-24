@@ -54,3 +54,11 @@ export function formatReadingTime(words: number, wpm: number): string {
   const minutes = words / wpm;
   return minutes < 1 ? 'menos de 1 min' : `~${Math.round(minutes)} min`;
 }
+
+/** "menos de 1 min", "42 min", "1 h 05 min". */
+export function formatDuration(ms: number): string {
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 1) return 'menos de 1 min';
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')} min`;
+}

@@ -21,6 +21,13 @@
       @if (library().length) {
         <section class="card w-full max-w-3xl p-4" aria-labelledby="library-title">
           <h2 id="library-title" class="text-lg font-semibold mb-2">Sua biblioteca</h2>
+          @if (statsSummary) {
+            <p id="reading-stats" class="text-sm text-gray-700 dark:text-gray-300 mb-2">
+              {{ statsSummary }}
+              <button type="button" class="underline hover:no-underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+                aria-label="Zerar estatísticas de leitura" (click)="resetStats()">Zerar</button>
+            </p>
+          }
           <ul class="divide-y divide-gray-200 dark:divide-gray-700">
             @for (item of library(); track item.id) {
               <li class="flex flex-wrap items-center justify-between gap-2 py-2">

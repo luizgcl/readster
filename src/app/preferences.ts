@@ -167,3 +167,26 @@ export function updateProgress(id: string, index: number): void {
 export function removeFromLibrary(id: string): void {
   write(LIBRARY_KEY, loadLibrary().filter(item => item.id !== id));
 }
+
+/** Totals of timed reading: only steps that took a measurable, non-idle time count, so the average is honest. */
+export interface ReadingStats {
+  words: number;
+  ms: number;
+}
+
+const STATS_KEY = 'readster:stats';
+
+export function loadStats(): ReadingStats {
+  const raw = (read(STATS_KEY) ?? {}) as Record<string, unknown>;
+  const valid = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+  return { words: valid(raw['words']), ms: valid(raw['ms']) };
+}
+
+export function addReadingStats(words: number, ms: number): void {
+  const stats = loadStats();
+  write(STATS_KEY, { words: stats.words + words, ms: stats.ms + ms });
+}
+
+export function clearStats(): void {
+  write(STATS_KEY, null);
+}
