@@ -1,23 +1,30 @@
-<main class="h-screen w-screen bg-gray-100">
-  <nav class="bg-white w-full px-4 py-2 mb-2 shadow-lg h-14">
+<main class="min-h-dvh w-full bg-gray-100 flex flex-col">
+  <nav class="bg-white w-full px-4 py-2 shadow-lg h-14 flex items-center">
     <h1 class="font-bold text-3xl">Readster</h1>
   </nav>
-  <section class="flex flex-col justify-center items-center h-[calc(100vh-64px)]">
+  <section class="flex flex-col flex-1 items-center justify-center px-4 py-6">
     @if (isReaderMode) {
       <app-reader [text]="form.value.text" (quitReading)="handleQuitReading()"></app-reader>
     } @else {
-      <form [formGroup]="form" (submit)="onSubmit()"
-        class="flex flex-col justify-center bg-white rounded-md p-4 gap-3 flex-1 my-12 shadow-lg w-1/2">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()"
+        class="flex flex-col bg-white rounded-md p-4 gap-3 shadow-lg w-full max-w-3xl">
         <label for="text" class="text-xl">Deixe seu texto abaixo para ler de uma maneira descomplicada</label>
-        <textarea 
-          id="text" 
-          class="border border-gray-300 rounded-md p-2 flex-1"
+        <textarea
+          id="text"
+          class="border border-gray-300 rounded-md p-2 min-h-[50dvh] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
           placeholder="Insira aqui o texto que deseja ler com facilidade"
-          formControlName="text"></textarea>
-        <button 
-          type="submit" 
-          class="flex justify-center items-center gap-2 bg-blue-300 px-4 py-2 rounded-md uppercase hover:bg-blue-400 transition-colors">
-          <lucide-icon name="play" />
+          formControlName="text"
+          [attr.aria-invalid]="showTextError"
+          aria-describedby="text-error"></textarea>
+        <p id="text-error" class="text-red-700 text-sm" aria-live="polite">
+          @if (showTextError) {
+            Insira algum texto para iniciar a leitura.
+          }
+        </p>
+        <button
+          type="submit"
+          class="flex justify-center items-center gap-2 bg-blue-300 px-4 py-2 rounded-md uppercase hover:bg-blue-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-700">
+          <lucide-icon name="play" aria-hidden="true" />
           Iniciar Leitura
         </button>
       </form>

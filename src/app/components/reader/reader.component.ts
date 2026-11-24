@@ -1,77 +1,76 @@
-import { Component, ElementRef, input, output, QueryList, Signal, viewChild, viewChildren } from '@angular/core';
+import { afterNextRender, Component, computed, ElementRef, inject, Injector, input, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { FontSizePipe } from '../../pipes/font-size.pipe';
 import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'app-reader',
-  standalone: true,
-  imports: [LucideAngularModule, FontSizePipe, FormsModule],
-  templateUrl: './reader.component.html',
-  styleUrl: './reader.component.scss'
+    selector: 'app-reader',
+    imports: [LucideAngularModule, FontSizePipe, FormsModule],
+    templateUrl: './reader.component.html',
+    styleUrl: './reader.component.scss'
 })
 export class ReaderComponent {
+  private host = inject(ElementRef<HTMLElement>);
+  private injector = inject(Injector);
 
-  text = input.required({
-    transform: (value: string) => value.trim(),
-  })
-
+  text = input.required<string>();
   quitReading = output();
 
-  maxFontSteps = 4;
-  currentFontStep = 1;
+  words = computed(() => this.text().trim().split(/\s+/).filter(Boolean));
 
-  fontSize = 20;
+  readonly minFontSize = 12;
+  readonly maxFontSize = 32;
+  readonly defaultFontSize = 20;
+  readonly fontStep = 4;
+  fontSize = this.defaultFontSize;
 
+  readonly highlightOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   highlightWords = 1;
-  highlightedIndex: number = 0;
+  highlightedIndex = 0;
 
-  wordElements = viewChild<ElementRef>('wordElement');
+  isHighlighted(index: number): boolean {
+    return index >= this.highlightedIndex && index < this.highlightedIndex + this.highlightWords;
+  }
+
+  get isAtStart(): boolean {
+    return this.highlightedIndex === 0;
+  }
+
+  get isAtEnd(): boolean {
+    return this.highlightedIndex + this.highlightWords >= this.words().length;
+  }
 
   highlightPreviousWord(): void {
-    if (this.highlightedIndex > 0) {
-      this.highlightedIndex--;
-    } else {
-      this.highlightedIndex = 0;
-    }
-
+    this.highlightedIndex = Math.max(0, this.highlightedIndex - this.highlightWords);
     this.scrollToHighlightedWord();
   }
 
   highlightNextWord(): void {
-    const words = this.text().split(' ');
-    if (this.highlightedIndex < words.length - 1) {
-      this.highlightedIndex+=this.highlightWords;
-    } else {
-      this.highlightedIndex = 0;
+    if (this.isAtEnd) {
+      return;
     }
-
+    this.highlightedIndex += this.highlightWords;
     this.scrollToHighlightedWord();
   }
 
-  increaseFontSize() {
-    if (this.currentFontStep < this.maxFontSteps) {
-      this.currentFontStep++;
-      this.fontSize += 4;
-    }
+  increaseFontSize(): void {
+    this.fontSize = Math.min(this.maxFontSize, this.fontSize + this.fontStep);
   }
 
-  resetFontSize() {
-    this.currentFontStep = 1;
-    this.fontSize = 20;
+  resetFontSize(): void {
+    this.fontSize = this.defaultFontSize;
   }
 
-  decreaseFontSize() {
-    if (this.fontSize > 12) {
-      this.currentFontStep--;
-      this.fontSize -= 4;
-    }
+  decreaseFontSize(): void {
+    this.fontSize = Math.max(this.minFontSize, this.fontSize - this.fontStep);
   }
 
-  scrollToHighlightedWord(): void {
-    const highlightedElement = this.wordElements();
-    if (highlightedElement) {
-      highlightedElement.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+  // Runs after the DOM reflects the new index, otherwise we would scroll to the previous word.
+  private scrollToHighlightedWord(): void {
+    afterNextRender(() => {
+      const element: HTMLElement | null = this.host.nativeElement.querySelector('.highlight');
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      element?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    }, { injector: this.injector });
   }
 }

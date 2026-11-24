@@ -1,15 +1,13 @@
 import { Component, inject } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterOutlet } from '@angular/router';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ReaderComponent } from './components/reader/reader.component';
 import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [RouterOutlet, ReaderComponent, FormsModule, ReactiveFormsModule, LucideAngularModule],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+    selector: 'app-root',
+    imports: [ReaderComponent, ReactiveFormsModule, LucideAngularModule],
+    templateUrl: './app.component.html',
+    styleUrl: './app.component.scss'
 })
 export class AppComponent {
 
@@ -18,14 +16,21 @@ export class AppComponent {
 
   isReaderMode = false;
 
-  constructor() { 
+  constructor() {
     this.form = this.formBuilder.group({
-      text: [null, Validators.required]
+      // pattern rejects whitespace-only text, which would open an empty reader
+      text: [null, [Validators.required, Validators.pattern(/\S/)]]
     })
+  }
+
+  get showTextError(): boolean {
+    const control = this.form.controls['text'];
+    return control.invalid && control.touched;
   }
 
   onSubmit() {
     if (this.form.invalid) {
+      this.form.markAllAsTouched();
       return;
     }
 
