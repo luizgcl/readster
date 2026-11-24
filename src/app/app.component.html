@@ -1,107 +1,17 @@
-<main class="min-h-dvh w-full bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex flex-col">
-  <nav class="bg-white dark:bg-gray-900 w-full px-4 h-14 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-    <h1 class="flex items-center gap-2 font-extrabold text-3xl tracking-tight lowercase">
+<div class="min-h-dvh w-full bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex flex-col">
+  <header class="bg-white dark:bg-gray-900 w-full px-4 h-14 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+    <a routerLink="/app" class="focus-ring rounded-md flex items-center gap-2 font-extrabold text-3xl tracking-tight lowercase" aria-label="Readster: ir para a biblioteca">
       <img src="logo.svg" alt="" width="34" height="31" />
       Readster
-    </h1>
+    </a>
     <button type="button" class="btn btn-ghost btn-icon"
       [attr.aria-label]="'Tema: ' + themeInfo.label + '. Clique para alternar.'"
       [title]="'Tema: ' + themeInfo.label"
       (click)="cycleTheme()">
       <lucide-icon [name]="themeInfo.icon" aria-hidden="true" />
     </button>
-  </nav>
-  <section class="flex flex-col flex-1 items-center justify-center px-3 py-4 sm:px-4 sm:py-6 gap-4">
-    @if (isReaderMode) {
-      @if (storageWarning) {
-        <p class="w-full max-w-3xl text-sm rounded-md p-2 bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100" role="status">
-          Não foi possível salvar este texto no navegador (o espaço pode estar cheio). Você pode ler normalmente, mas o progresso não será guardado.
-        </p>
-      }
-      <app-reader [text]="form.value.text" [startIndex]="startIndex" [itemId]="itemId" (quitReading)="handleQuitReading()"></app-reader>
-    } @else {
-      @if (library().length) {
-        <section class="card w-full max-w-3xl p-4" aria-labelledby="library-title">
-          <h2 id="library-title" class="text-lg font-semibold mb-1">Sua biblioteca</h2>
-          @if (statsSummary) {
-            <p id="reading-stats" class="text-sm text-gray-700 dark:text-gray-300 mb-1">
-              {{ statsSummary }}
-              <button type="button" class="focus-ring inline-flex min-h-11 -my-3 items-center px-1 underline hover:no-underline rounded"
-                aria-label="Zerar estatísticas de leitura" (click)="resetStats()">Zerar</button>
-            </p>
-          }
-          <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-            @for (item of library(); track item.id; let first = $first) {
-              <li class="flex items-center gap-2 py-3">
-                <div class="min-w-0 flex-1">
-                  <p class="truncate font-medium" [title]="item.title">{{ item.title }}</p>
-                  <p class="text-sm text-gray-700 dark:text-gray-300">
-                    {{ percentRead(item) === 100 ? 'Concluído' : percentRead(item) + '% lido' }}
-                    · {{ item.words }} palavras<span class="hidden sm:inline"> · {{ formatDate(item.updatedAt) }}</span>
-                  </p>
-                </div>
-                <!-- Icon-only on phones so the title keeps most of the row; the most recent text is the main action. -->
-                <button type="button" class="btn px-0 w-11 sm:w-auto sm:px-4" [class]="first ? 'btn-primary' : 'btn-secondary'"
-                  [attr.aria-label]="(percentRead(item) === 100 ? 'Ler de novo: ' : 'Continuar: ') + item.title"
-                  (click)="openItem(item)">
-                  <lucide-icon name="play" size="18" aria-hidden="true" />
-                  <span class="hidden sm:inline">{{ percentRead(item) === 100 ? 'Ler de novo' : 'Continuar' }}</span>
-                </button>
-                <button type="button" class="btn btn-ghost btn-icon"
-                  [attr.aria-label]="'Excluir: ' + item.title" title="Excluir"
-                  (click)="removeItem(item)">
-                  <lucide-icon name="trash-2" size="18" aria-hidden="true" />
-                </button>
-              </li>
-            }
-          </ul>
-        </section>
-      }
-      <form [formGroup]="form" (ngSubmit)="onSubmit()"
-        class="card flex flex-col p-4 gap-3 w-full max-w-3xl">
-        <div>
-          <label for="text" class="text-xl font-semibold">Cole um texto e leia no seu ritmo</label>
-          <p class="text-gray-700 dark:text-gray-300 mt-1">
-            O Readster destaca as palavras uma a uma ou em grupos, avança sozinho na velocidade que você escolher
-            e deixa a fonte do seu jeito. Seus textos ficam salvos apenas no seu navegador.
-          </p>
-        </div>
-        <!-- Grows with the text (field-sizing) up to half the screen, so the start button stays in view. -->
-        <textarea
-          id="text"
-          rows="6"
-          class="field p-3 min-h-36 max-h-[50dvh] resize-y [field-sizing:content]"
-          placeholder="Cole aqui o texto que deseja ler"
-          formControlName="text"
-          [attr.aria-invalid]="showTextError"
-          aria-describedby="text-error text-stats"></textarea>
-        <div class="flex flex-wrap justify-between gap-x-2 text-sm">
-          <p id="text-error" class="text-red-700 dark:text-red-400" aria-live="polite">
-            @if (showTextError) {
-              Insira algum texto para iniciar a leitura.
-            }
-          </p>
-          <p class="text-gray-700 dark:text-gray-300" role="status">{{ importing ? 'Lendo PDF…' : '' }}</p>
-          <p class="text-red-700 dark:text-red-400" role="alert">{{ importError }}</p>
-          <p id="text-stats" class="text-gray-700 dark:text-gray-300 ml-auto">
-            @if (wordCount) {
-              {{ wordCount }} palavras · {{ readingTime }} a {{ wpm() }} palavras/min
-            }
-          </p>
-        </div>
-        <div class="flex flex-col-reverse sm:flex-row sm:items-center gap-2">
-          <label class="btn btn-secondary cursor-pointer focus-within:ring-2 focus-within:ring-brand-600 dark:focus-within:ring-brand-300">
-            <lucide-icon name="file-text" size="18" aria-hidden="true" />
-            Abrir arquivo .txt ou .pdf
-            <input type="file" accept=".txt,.md,text/plain,.pdf,application/pdf" class="sr-only"
-              [disabled]="importing" (change)="onFileSelected($event)" />
-          </label>
-          <button type="submit" class="btn btn-primary sm:ml-auto sm:min-w-48">
-            <lucide-icon name="play" size="20" aria-hidden="true" />
-            Iniciar leitura
-          </button>
-        </div>
-      </form>
-    }
-  </section>
-</main>
+  </header>
+  <main class="flex flex-col flex-1 items-center px-3 py-4 sm:px-4 sm:py-6 gap-4">
+    <router-outlet />
+  </main>
+</div>

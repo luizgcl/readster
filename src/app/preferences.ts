@@ -5,6 +5,8 @@ export type Theme = 'auto' | 'light' | 'dark';
 export type ReadingMode = 'highlight' | 'rsvp';
 export type FontFamily = 'sans' | 'serif';
 export type TextWidth = 'narrow' | 'medium' | 'wide';
+/** Light chips keep dark text readable in both themes; 'underline' marks without a background. */
+export type HighlightColor = 'amber' | 'green' | 'blue' | 'pink' | 'underline';
 
 export const OPTIONS = {
   theme: ['auto', 'light', 'dark'],
@@ -12,6 +14,7 @@ export const OPTIONS = {
   fontFamily: ['sans', 'serif'],
   lineHeight: [1.5, 1.75, 2],
   textWidth: ['narrow', 'medium', 'wide'],
+  highlightColor: ['amber', 'green', 'blue', 'pink', 'underline'],
 } as const;
 
 export const LIMITS = {
@@ -30,6 +33,7 @@ export interface Prefs {
   fontFamily: FontFamily;
   lineHeight: number;
   textWidth: TextWidth;
+  highlightColor: HighlightColor;
 }
 
 /** A text saved in the local library, with the reading position. */
@@ -94,6 +98,7 @@ export function loadPrefs(): Prefs {
     fontFamily: oneOf(raw['fontFamily'], OPTIONS.fontFamily),
     lineHeight: oneOf(raw['lineHeight'], OPTIONS.lineHeight, 1.75),
     textWidth: oneOf(raw['textWidth'], OPTIONS.textWidth, 'medium'),
+    highlightColor: oneOf(raw['highlightColor'], OPTIONS.highlightColor),
   };
 }
 
