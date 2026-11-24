@@ -8,9 +8,27 @@
 }
 
 @layer components {
+  .card {
+    @apply bg-white text-gray-900 rounded-md shadow-lg dark:bg-gray-900 dark:text-gray-100 dark:shadow-none dark:ring-1 dark:ring-gray-800;
+  }
+
+  .field {
+    @apply rounded-md border border-gray-300 bg-white text-gray-900
+      dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 dark:focus-visible:ring-blue-400;
+  }
+
   .btn-icon {
     @apply rounded-md p-2 text-white bg-blue-600 hover:bg-blue-700 transition-colors
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-700
+      dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-gray-900
       disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    scroll-behavior: auto !important;
   }
 }
