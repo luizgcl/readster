@@ -12,6 +12,12 @@
   @apply underline decoration-dotted underline-offset-4;
 }
 
+.reading-box {
+  // Fills the screen while keeping progress, playback and speed in view (~22rem with the nav);
+  // the settings panel opens below and scrolls the page.
+  height: max(10rem, calc(100dvh - 22rem));
+}
+
 .setting {
   @apply flex flex-col gap-1;
 }

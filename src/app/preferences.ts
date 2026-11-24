@@ -101,7 +101,8 @@ export function savePrefs(patch: Partial<Prefs>): void {
   write(PREFS_KEY, { ...loadPrefs(), ...patch });
 }
 
-function titleFor(text: string): string {
+/** First line of a text, whitespace collapsed, at most 60 characters. */
+export function titleFor(text: string): string {
   const firstLine = text.trim().split('\n')[0].trim().replace(/\s+/g, ' ');
   return firstLine.length > 60 ? firstLine.slice(0, 59) + '…' : firstLine;
 }

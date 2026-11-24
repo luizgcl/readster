@@ -1,13 +1,13 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideClientHydration } from '@angular/platform-browser';
 import {
-  AArrowDown, AArrowUp, ArrowBigLeft, ArrowBigRight, LUCIDE_ICONS, LucideIconProvider,
-  FileText, Monitor, Moon, Pause, Play, RotateCcw, SkipBack, Sun, Trash2, X,
+  AArrowDown, AArrowUp, ArrowBigLeft, ArrowBigRight, ArrowLeft, LUCIDE_ICONS, LucideIconProvider,
+  FileText, Monitor, Moon, Pause, Play, RotateCcw, SkipBack, Sun, Trash2,
 } from 'lucide-angular';
 
 // Register only the icons in use; registering the full set added ~250 kB to the bundle.
 const icons = {
-  AArrowDown, AArrowUp, ArrowBigLeft, ArrowBigRight, FileText, Monitor, Moon, Pause, Play, RotateCcw, SkipBack, Sun, Trash2, X,
+  AArrowDown, AArrowUp, ArrowBigLeft, ArrowBigRight, ArrowLeft, FileText, Monitor, Moon, Pause, Play, RotateCcw, SkipBack, Sun, Trash2,
 };
 
 export const appConfig: ApplicationConfig = {

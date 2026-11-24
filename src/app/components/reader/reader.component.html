@@ -1,10 +1,14 @@
-<div class="flex flex-col w-full max-w-5xl card p-4 gap-3" [class.font-serif]="fontFamily === 'serif'">
-  @if (!hideSettings) {
-    <h2 class="text-blue-700 dark:text-blue-300 font-bold text-2xl font-sans">Leitura</h2>
-  }
+<div class="flex flex-col w-full max-w-5xl card p-3 sm:p-4 gap-3" [class.font-serif]="fontFamily === 'serif'">
+  <header class="flex items-center gap-2 font-sans">
+    <button type="button" class="btn btn-ghost px-2 -ml-1 shrink-0" aria-label="Voltar à biblioteca" (click)="quitReading.emit()">
+      <lucide-icon name="arrow-left" size="20" aria-hidden="true" />
+      Biblioteca
+    </button>
+    <h2 class="min-w-0 truncate text-base sm:text-lg font-semibold" [title]="title()">{{ title() }}</h2>
+  </header>
 
   @if (mode === 'highlight') {
-    <div #textContainer class="overflow-auto h-[50dvh] p-3" [style.fontSize]="fontSize | fontSize" (click)="onTextClick($event)">
+    <div #textContainer class="overflow-auto reading-box p-1 sm:p-3" [style.fontSize]="fontSize | fontSize" (click)="onTextClick($event)">
       <div class="mx-auto break-words" [class]="textWidthClass" [style.lineHeight]="lineHeight">
         @for (paragraph of paragraphs(); track paragraph.start) {
           <p class="mb-4 last:mb-0">
@@ -17,7 +21,7 @@
     </div>
   } @else {
     <!-- RSVP: the pivot letter stays centered so the eyes do not move between chunks -->
-    <div class="h-[50dvh] flex flex-col items-center justify-center gap-2 overflow-hidden [container-type:size]">
+    <div class="reading-box flex flex-col items-center justify-center gap-2 overflow-hidden [container-type:size]">
       <span class="w-px h-4 bg-gray-400 dark:bg-gray-500" aria-hidden="true"></span>
       <p class="rsvp grid grid-cols-[1fr_auto_1fr] w-full whitespace-pre leading-none" [style.fontSize]="rsvpFontSize"
         [attr.aria-label]="rsvpParts.before + rsvpParts.pivot + rsvpParts.after">
@@ -33,7 +37,7 @@
     <div class="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"
       role="progressbar" aria-label="Progresso da leitura"
       aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="progressPercent">
-      <div class="h-full bg-blue-600 dark:bg-blue-400 transition-[width]" [style.width.%]="progressPercent"></div>
+      <div class="h-full bg-brand-500 dark:bg-brand-400 transition-[width]" [style.width.%]="progressPercent"></div>
     </div>
     <p class="mt-1 flex flex-wrap justify-between gap-x-3 text-sm text-gray-700 dark:text-gray-300">
       <span>{{ wordsRead }} de {{ words().length }} palavras ({{ progressPercent }}%)</span>
@@ -47,42 +51,42 @@
 
   <footer class="flex flex-col items-center w-full gap-3 font-sans">
     <div class="flex items-center gap-2" role="group" aria-label="Controles de leitura">
-      <button type="button" class="btn-icon" aria-label="Voltar ao início" title="Voltar ao início"
+      <button type="button" class="btn btn-secondary btn-icon" aria-label="Voltar ao início" title="Voltar ao início"
         [disabled]="isAtStart" (click)="restart()">
-        <lucide-icon name="skip-back" size="28" aria-hidden="true" />
+        <lucide-icon name="skip-back" size="22" aria-hidden="true" />
       </button>
-      <button type="button" class="btn-icon" aria-label="Palavras anteriores" title="Palavras anteriores (←)"
+      <button type="button" class="btn btn-secondary btn-icon" aria-label="Palavras anteriores" title="Palavras anteriores (←)"
         [disabled]="isAtStart" (click)="highlightPreviousWord()">
-        <lucide-icon name="arrow-big-left" size="28" aria-hidden="true" />
+        <lucide-icon name="arrow-big-left" size="22" aria-hidden="true" />
       </button>
-      <button type="button" class="btn-icon p-3"
+      <button type="button" class="btn btn-primary size-14 rounded-full px-0"
         [attr.aria-label]="playing ? 'Pausar leitura automática' : 'Iniciar leitura automática'"
         [title]="playing ? 'Pausar (Espaço)' : 'Iniciar (Espaço)'"
         (click)="togglePlay()">
-        <lucide-icon [name]="playing ? 'pause' : 'play'" size="36" aria-hidden="true" />
+        <lucide-icon [name]="playing ? 'pause' : 'play'" size="28" aria-hidden="true" />
       </button>
-      <button type="button" class="btn-icon" aria-label="Próximas palavras" title="Próximas palavras (→)"
+      <button type="button" class="btn btn-secondary btn-icon" aria-label="Próximas palavras" title="Próximas palavras (→)"
         [disabled]="isAtEnd" (click)="highlightNextWord()">
-        <lucide-icon name="arrow-big-right" size="28" aria-hidden="true" />
+        <lucide-icon name="arrow-big-right" size="22" aria-hidden="true" />
       </button>
     </div>
 
     @if (!hideSettings) {
       <div class="flex flex-col items-center gap-1">
         <label for="wpm" class="text-sm">Velocidade: <strong>{{ wpm }}</strong> palavras/min</label>
-        <input id="wpm" type="range" class="w-48 accent-blue-600"
+        <input id="wpm" type="range" class="w-56 h-11 accent-brand-500 cursor-pointer"
           [min]="limits.wpm.min" [max]="limits.wpm.max" [step]="limits.wpm.step"
           [ngModel]="wpm" (ngModelChange)="onWpmChange($event)" />
       </div>
 
       <details class="w-full max-w-2xl rounded-md border border-gray-200 dark:border-gray-700">
-        <summary class="cursor-pointer select-none px-3 py-2 text-sm font-semibold rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 dark:focus-visible:ring-blue-400">
+        <summary class="cursor-pointer select-none flex items-center min-h-11 px-3 text-sm font-semibold rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-300">
           Ajustes de leitura
         </summary>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 text-sm">
           <label class="setting">
             Exibição
-            <select class="field h-10 px-2" [ngModel]="mode" (ngModelChange)="setPref('mode', $event)">
+            <select class="field h-11 px-2" [ngModel]="mode" (ngModelChange)="setPref('mode', $event)">
               @for (option of options.mode; track option) {
                 <option [ngValue]="option">{{ labels[option] }}</option>
               }
@@ -90,7 +94,7 @@
           </label>
           <label class="setting">
             Palavras por vez
-            <select id="highlight-words" class="field h-10 px-2"
+            <select id="highlight-words" class="field h-11 px-2"
               [ngModel]="highlightWords" (ngModelChange)="onHighlightWordsChange($event)">
               @for (option of highlightOptions; track option) {
                 <option [ngValue]="option">{{ option }}</option>
@@ -99,7 +103,7 @@
           </label>
           <label class="setting">
             Fonte
-            <select class="field h-10 px-2" [ngModel]="fontFamily" (ngModelChange)="setPref('fontFamily', $event)">
+            <select class="field h-11 px-2" [ngModel]="fontFamily" (ngModelChange)="setPref('fontFamily', $event)">
               @for (option of options.fontFamily; track option) {
                 <option [ngValue]="option">{{ labels[option] }}</option>
               }
@@ -108,15 +112,15 @@
           <div class="setting">
             <span id="font-size-label">Tamanho da fonte</span>
             <div class="flex gap-2" role="group" aria-labelledby="font-size-label">
-              <button type="button" class="btn-icon" aria-label="Diminuir fonte" title="Diminuir fonte (−)"
+              <button type="button" class="btn btn-secondary btn-icon" aria-label="Diminuir fonte" title="Diminuir fonte (−)"
                 [disabled]="fontSize <= limits.fontSize.min" (click)="decreaseFontSize()">
                 <lucide-icon name="a-arrow-down" size="22" aria-hidden="true" />
               </button>
-              <button type="button" class="btn-icon" aria-label="Restaurar tamanho da fonte" title="Restaurar tamanho da fonte"
+              <button type="button" class="btn btn-secondary btn-icon" aria-label="Restaurar tamanho da fonte" title="Restaurar tamanho da fonte"
                 [disabled]="fontSize === limits.fontSize.default" (click)="resetFontSize()">
                 <lucide-icon name="rotate-ccw" size="22" aria-hidden="true" />
               </button>
-              <button type="button" class="btn-icon" aria-label="Aumentar fonte" title="Aumentar fonte (+)"
+              <button type="button" class="btn btn-secondary btn-icon" aria-label="Aumentar fonte" title="Aumentar fonte (+)"
                 [disabled]="fontSize >= limits.fontSize.max" (click)="increaseFontSize()">
                 <lucide-icon name="a-arrow-up" size="22" aria-hidden="true" />
               </button>
@@ -125,7 +129,7 @@
           @if (mode === 'highlight') {
             <label class="setting">
               Entrelinha
-              <select class="field h-10 px-2" [ngModel]="lineHeight" (ngModelChange)="setPref('lineHeight', $event)">
+              <select class="field h-11 px-2" [ngModel]="lineHeight" (ngModelChange)="setPref('lineHeight', $event)">
                 @for (option of options.lineHeight; track option) {
                   <option [ngValue]="option">{{ labels[option.toString()] }}</option>
                 }
@@ -133,7 +137,7 @@
             </label>
             <label class="setting">
               Largura do texto
-              <select class="field h-10 px-2" [ngModel]="textWidth" (ngModelChange)="setPref('textWidth', $event)">
+              <select class="field h-11 px-2" [ngModel]="textWidth" (ngModelChange)="setPref('textWidth', $event)">
                 @for (option of options.textWidth; track option) {
                   <option [ngValue]="option">{{ labels[option] }}</option>
                 }
@@ -141,18 +145,11 @@
             </label>
           }
           <label class="flex items-center gap-2 sm:col-span-2">
-            <input type="checkbox" class="size-4 accent-blue-600" [ngModel]="focusMode" (ngModelChange)="setPref('focusMode', $event)" />
+            <input type="checkbox" class="size-5 accent-brand-500" [ngModel]="focusMode" (ngModelChange)="setPref('focusMode', $event)" />
             Modo foco: esconder ajustes durante a leitura automática
           </label>
         </div>
       </details>
-
-      <button type="button"
-        class="flex justify-center uppercase items-center gap-1 p-2 rounded-md bg-red-300 text-gray-900 hover:bg-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700"
-        (click)="quitReading.emit()">
-        <lucide-icon name="x" aria-hidden="true" />
-        Encerrar leitura
-      </button>
 
       <p class="hidden sm:block text-xs text-gray-600 dark:text-gray-400">
         Atalhos: <kbd>Espaço</kbd> iniciar/pausar · <kbd>←</kbd> <kbd>→</kbd> navegar · <kbd>+</kbd> <kbd>−</kbd> fonte · <kbd>F</kbd> modo foco

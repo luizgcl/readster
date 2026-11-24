@@ -69,7 +69,8 @@ describe('AppComponent', () => {
     button('Próximas palavras').click();
     await fixture.whenStable();
 
-    el.querySelector<HTMLButtonElement>('app-reader button.bg-red-300')!.click();
+    expect(el.querySelector('app-reader h2')?.textContent).toContain('um dois três quatro'); // the text's title
+    button('Voltar à biblioteca').click();
     await fixture.whenStable();
     expect(app.isReaderMode).toBeFalse();
     expect(libraryText()).toContain('um dois três quatro');
