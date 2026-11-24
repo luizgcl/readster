@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Only the landing page: the app screens (/app/...) hold each visitor's own texts and are noindex. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://readster.luizgcl.com.br/</loc>
+  </url>
+</urlset>

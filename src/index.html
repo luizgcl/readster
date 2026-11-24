@@ -2,14 +2,27 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <title>Readster | Leitura descomplicada</title>
+  <title>Readster: leia no seu ritmo, com destaque palavra a palavra</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Cole um texto e leia no seu ritmo: destaque de palavras, leitura automática com velocidade ajustável e fonte personalizável. Seu texto fica apenas no seu navegador.">
+  <meta name="description" content="Cole um texto ou abra um PDF e leia no seu ritmo: o Readster destaca as palavras, avança sozinho na velocidade que você escolher e lembra onde você parou. Grátis, sem cadastro, e o texto fica no seu navegador.">
+  <meta name="theme-color" content="#505CF3">
+  <!-- Link previews (WhatsApp, LinkedIn, X...). og:url and the description are refined per page. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Readster">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="Readster: leia no seu ritmo, sem se perder no texto">
+  <meta property="og:description" content="Destaque palavra a palavra, leitura automática com velocidade ajustável e biblioteca que lembra onde você parou. Grátis e sem cadastro.">
+  <meta property="og:url" content="https://readster.luizgcl.com.br/">
+  <meta property="og:image" content="https://readster.luizgcl.com.br/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Logo do Readster e a frase: leia no seu ritmo, sem se perder no texto.">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="favicon.ico" sizes="32x32 48x48">
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <!-- Apply the saved theme before first paint to avoid a light flash; kept in sync with AppComponent.applyTheme -->
+  <!-- Apply the saved theme before first paint to avoid a light flash; kept in sync with ThemeToggleComponent.apply -->
   <script>
     try {
       var theme = (JSON.parse(localStorage.getItem('readster:prefs')) || {}).theme;

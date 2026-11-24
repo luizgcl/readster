@@ -298,6 +298,21 @@ describe('screens', () => {
       expect(el.querySelector('#perguntas')?.textContent).toContain('Não prometemos isso');
     });
 
+    it('tells search engines what to index, with canonical URL and structured data', async () => {
+      await go('/');
+      const head = document.head;
+      expect(head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href).toBe('https://readster.luizgcl.com.br/');
+      expect(head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('index, follow');
+      const faq = JSON.parse(head.querySelector('#ld-faq')!.textContent!);
+      expect(faq['@type']).toBe('FAQPage');
+      expect(faq.mainEntity[0].name).toBe('O Readster faz eu ler mais rápido?');
+      expect(JSON.parse(head.querySelector('#ld-app')!.textContent!)['@type']).toBe('WebApplication');
+
+      await go('/app');
+      expect(head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, follow');
+      expect(head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href).toBe('https://readster.luizgcl.com.br/app');
+    });
+
     it('is reachable from the logo inside the app', async () => {
       await go('/app');
       expect(el.ownerDocument.querySelector('app-shell a[href="/"]')?.textContent).toContain('Readster');

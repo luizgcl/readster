@@ -2,6 +2,7 @@ import { afterNextRender, Component, inject, Injectable, signal } from '@angular
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { setPageSeo } from '../seo';
 import { countWords, formatReadingTime } from '../reading';
 import { addToLibrary, LIMITS, loadPrefs } from '../preferences';
 import { extractPdfText, PdfImportError } from '../pdf';
@@ -90,6 +91,7 @@ export class NewReadingPage {
   wpm = signal<number>(LIMITS.wpm.default);
 
   constructor() {
+    setPageSeo({ path: '/app/nova', index: false });
     afterNextRender(() => this.wpm.set(loadPrefs().wpm));
   }
 
