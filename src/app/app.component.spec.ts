@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
 import { appConfig } from './app.config';
 import { addToLibrary, loadLibrary, loadPrefs, updateProgress } from './preferences';
+import { makePdf } from './pdf.spec';
 
 describe('AppComponent', () => {
   let fixture: ComponentFixture<AppComponent>;
@@ -114,13 +115,13 @@ describe('AppComponent', () => {
   });
 
   describe('importing a file', () => {
-    async function pick(file: File) {
+    async function pick(file: File, wait = 50) {
       const input = el.querySelector<HTMLInputElement>('input[type="file"]')!;
       const transfer = new DataTransfer();
       transfer.items.add(file);
       input.files = transfer.files;
       input.dispatchEvent(new Event('change'));
-      await new Promise(resolve => setTimeout(resolve, 50)); // file.text() is async
+      await new Promise(resolve => setTimeout(resolve, wait)); // file reading is async
       await fixture.whenStable();
     }
 
@@ -133,13 +134,30 @@ describe('AppComponent', () => {
 
     it('rejects unsupported, empty and oversized files', async () => {
       await create();
-      await pick(new File(['%PDF'], 'doc.pdf', { type: 'application/pdf' }));
+      await pick(new File(['PK'], 'doc.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
       expect(app.importError).toContain('Formato não suportado');
       await pick(new File(['   '], 'vazio.txt', { type: 'text/plain' }));
       expect(app.importError).toContain('vazio');
       await pick(new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'grande.txt', { type: 'text/plain' }));
       expect(app.importError).toContain('muito grande');
       expect(el.querySelector('[role="alert"]')?.textContent).toContain('muito grande');
+      expect(app.form.value.text).toBeNull();
+    });
+
+    it('fills the text area from a PDF', async () => {
+      await create();
+      await pick(makePdf([[['Texto do PDF', 700]]]), 1500);
+      expect(app.importError).toBe('');
+      expect(app.importing).toBeFalse();
+      expect(app.form.value.text).toBe('Texto do PDF');
+    });
+
+    it('explains when a PDF has no text (scanned) or is too large', async () => {
+      await create();
+      await pick(makePdf([[]]), 1500);
+      expect(app.importError).toContain('PDFs escaneados');
+      await pick(new File([new Uint8Array(20 * 1024 * 1024 + 1)], 'grande.pdf', { type: 'application/pdf' }));
+      expect(app.importError).toContain('O limite é 20 MB');
       expect(app.form.value.text).toBeNull();
     });
   });
