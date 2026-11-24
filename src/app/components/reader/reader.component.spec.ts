@@ -196,6 +196,65 @@ describe('ReaderComponent', () => {
     });
   });
 
+  describe('P2 modes and typography', () => {
+    it('jumps to a clicked word', () => {
+      (el.querySelector('[data-i="3"]') as HTMLElement).click();
+      fixture.detectChanges();
+      expect(highlighted()).toEqual(['quatro']);
+      expect(loadSession()?.index).toBe(3);
+    });
+
+    it('focus mode hides settings only while playing, toggled with F', fakeAsync(() => {
+      const settings = () => el.querySelector('details');
+      key('f');
+      fixture.detectChanges();
+      expect(component.focusMode).toBeTrue();
+      expect(settings()).withContext('paused: settings visible').toBeTruthy();
+
+      component.play();
+      fixture.detectChanges();
+      expect(settings()).withContext('playing: hidden').toBeNull();
+      expect(button('Pausar leitura automática')).withContext('playback stays reachable').toBeTruthy();
+
+      component.pause();
+      fixture.detectChanges();
+      expect(settings()).toBeTruthy();
+      expect(loadPrefs().focusMode).toBeTrue();
+    }));
+
+    it('RSVP shows the current chunk split at the pivot and keeps the position', () => {
+      component.highlightNextWord();
+      component.setPref('mode', 'rsvp');
+      fixture.detectChanges();
+      const rsvp = el.querySelector('.rsvp')!;
+      expect(rsvp.getAttribute('aria-label')).toBe('dois');
+      expect(Array.from(rsvp.children).map(c => c.textContent)).toEqual(['d', 'o', 'is']);
+      expect(el.querySelector('.highlight')).toBeNull();
+
+      component.onHighlightWordsChange(2);
+      fixture.detectChanges();
+      expect(rsvp.getAttribute('aria-label')).toBe('dois três');
+
+      component.setPref('mode', 'highlight');
+      fixture.detectChanges();
+      expect(highlighted()).toEqual(['dois', 'três']);
+      expect(loadPrefs().mode).toBe('highlight');
+    });
+
+    it('applies font family, line height and text width', () => {
+      component.setPref('fontFamily', 'serif');
+      component.setPref('lineHeight', 2);
+      component.setPref('textWidth', 'narrow');
+      fixture.detectChanges();
+      const textBox = el.querySelector<HTMLElement>('[data-i="0"]')!.closest('div')!;
+      expect(el.querySelector('.card')!.classList).toContain('font-serif');
+      expect(textBox.style.lineHeight).toBe('2');
+      expect(textBox.classList).toContain('max-w-[55ch]');
+      expect(textBox.classList).toContain('mx-auto');
+      expect(loadPrefs()).toEqual(jasmine.objectContaining({ fontFamily: 'serif', lineHeight: 2, textWidth: 'narrow' }));
+    });
+  });
+
   it('changes font size from the buttons within limits', () => {
     button('Aumentar fonte').click();
     expect(component.fontSize).toBe(24);

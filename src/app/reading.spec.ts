@@ -1,4 +1,4 @@
-import { chunkDelayMs, countWords, formatReadingTime, tokenize } from './reading';
+import { chunkDelayMs, countWords, formatReadingTime, splitAtPivot, tokenize } from './reading';
 import { loadPrefs, loadSession, savePrefs, saveSession } from './preferences';
 
 describe('reading', () => {
@@ -25,6 +25,14 @@ describe('reading', () => {
     expect(chunkDelayMs(['citação."'], 60)).toBe(2000);
   });
 
+  it('splitAtPivot puts the recognition letter slightly left of center', () => {
+    expect(splitAtPivot('a')).toEqual({ before: '', pivot: 'a', after: '' });
+    expect(splitAtPivot('casa')).toEqual({ before: 'c', pivot: 'a', after: 'sa' });
+    expect(splitAtPivot('palavras')).toEqual({ before: 'pa', pivot: 'l', after: 'avras' });
+    expect(splitAtPivot('extraordinariamente')).toEqual({ before: 'extr', pivot: 'a', after: 'ordinariamente' });
+    expect(splitAtPivot('')).toEqual({ before: '', pivot: '', after: '' });
+  });
+
   it('formatReadingTime', () => {
     expect(formatReadingTime(100, 250)).toBe('menos de 1 min');
     expect(formatReadingTime(750, 250)).toBe('~3 min');
@@ -36,15 +44,24 @@ describe('preferences', () => {
   afterEach(() => localStorage.clear());
 
   it('returns defaults when nothing is stored', () => {
-    expect(loadPrefs()).toEqual({ fontSize: 20, highlightWords: 1, wpm: 250, theme: 'auto' });
+    expect(loadPrefs()).toEqual({
+      fontSize: 20, highlightWords: 1, wpm: 250, theme: 'auto',
+      mode: 'highlight', focusMode: false, fontFamily: 'sans', lineHeight: 1.75, textWidth: 'medium',
+    });
   });
 
   it('merges saved values and clamps tampered ones', () => {
-    savePrefs({ wpm: 400, theme: 'dark' });
-    expect(loadPrefs()).toEqual({ fontSize: 20, highlightWords: 1, wpm: 400, theme: 'dark' });
+    savePrefs({ wpm: 400, theme: 'dark', mode: 'rsvp', lineHeight: 2 });
+    expect(loadPrefs()).toEqual(jasmine.objectContaining({ fontSize: 20, wpm: 400, theme: 'dark', mode: 'rsvp', lineHeight: 2 }));
 
-    localStorage.setItem('readster:prefs', JSON.stringify({ fontSize: 999, highlightWords: -3, wpm: 'x', theme: 'neon' }));
-    expect(loadPrefs()).toEqual({ fontSize: 32, highlightWords: 1, wpm: 250, theme: 'auto' });
+    localStorage.setItem('readster:prefs', JSON.stringify({
+      fontSize: 999, highlightWords: -3, wpm: 'x', theme: 'neon',
+      mode: 'x', focusMode: 'yes', fontFamily: 'comic', lineHeight: 9, textWidth: 'huge',
+    }));
+    expect(loadPrefs()).toEqual({
+      fontSize: 32, highlightWords: 1, wpm: 250, theme: 'auto',
+      mode: 'highlight', focusMode: false, fontFamily: 'sans', lineHeight: 1.75, textWidth: 'medium',
+    });
   });
 
   it('survives corrupted JSON', () => {

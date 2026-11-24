@@ -39,6 +39,16 @@ export function chunkDelayMs(chunk: string[], wpm: number): number {
   return base;
 }
 
+/**
+ * Splits text around its optimal recognition point: the letter the eye should land on,
+ * slightly left of center. Keeping that letter in a fixed spot avoids eye movement between words.
+ */
+export function splitAtPivot(text: string): { before: string; pivot: string; after: string } {
+  const length = text.length;
+  const pivot = length <= 1 ? 0 : length <= 5 ? 1 : length <= 9 ? 2 : length <= 13 ? 3 : 4;
+  return { before: text.slice(0, pivot), pivot: text.charAt(pivot), after: text.slice(pivot + 1) };
+}
+
 /** Human estimate of reading time, e.g. "~3 min" or "menos de 1 min". */
 export function formatReadingTime(words: number, wpm: number): string {
   const minutes = words / wpm;
