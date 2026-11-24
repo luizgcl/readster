@@ -39,6 +39,8 @@ Before changing a domain concept or a past decision, read `GLOSSARY.md` (the pro
 
 ## Agent skills
 
+Workflow skills (TDD, bug diagnosis, domain modeling, PR review) come from `mattpocock/skills`. They are optional; install them for your agent from https://github.com/mattpocock/skills#installation.
+
 ### Issue tracker
 
 GitHub Issues on `luizgcl/readster`, via `gh`. See `docs/agents/issue-tracker.md`.
