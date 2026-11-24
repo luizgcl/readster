@@ -20,7 +20,12 @@ const TEXT_WIDTH_CLASS: Record<Prefs['textWidth'], string> = {
   imports: [LucideAngularModule, FontSizePipe, FormsModule],
   templateUrl: './reader.component.html',
   styleUrl: './reader.component.scss',
-  host: { '(document:keydown)': 'onKeydown($event)' },
+  host: {
+    // Full-width block: the RSVP box has no intrinsic width (container query), so an inline host
+    // would shrink the card to the controls' width on any screen.
+    class: 'flex w-full justify-center',
+    '(document:keydown)': 'onKeydown($event)',
+  },
 })
 export class ReaderComponent implements OnInit {
   private injector = inject(Injector);
@@ -109,13 +114,16 @@ export class ReaderComponent implements OnInit {
   }
 
   /**
-   * Twice the reading font size, shrunk so the longer side of the pivot fits in half the box.
+   * Scales with the RSVP box (width and height), using the font size setting as a multiplier,
+   * then shrinks so the longer side of the pivot still fits in half the box.
    * ponytail: assumes ~0.62em per glyph; very wide glyphs (e.g. "WWW") may still clip.
    */
   get rsvpFontSize(): string {
+    const scale = this.fontSize / LIMITS.fontSize.default;
     const { before, after } = this.rsvpParts;
     const sideChars = Math.max(before.length, after.length) + 0.5;
-    return `min(${this.fontSize * 2}px, calc(50cqw / ${(sideChars * 0.62).toFixed(2)}))`;
+    const responsive = `clamp(${(32 * scale).toFixed(1)}px, ${(10 * scale).toFixed(2)}cqw, ${(30 * scale).toFixed(2)}cqh)`;
+    return `min(${responsive}, calc(50cqw / ${(sideChars * 0.62).toFixed(2)}))`;
   }
 
   /** Focus mode hides everything but the text and playback controls while playing. */

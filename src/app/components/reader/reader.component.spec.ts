@@ -241,6 +241,16 @@ describe('ReaderComponent', () => {
       expect(loadPrefs().mode).toBe('highlight');
     });
 
+    it('RSVP font scales with the box and uses the font size setting as a multiplier', () => {
+      component.setPref('mode', 'rsvp');
+      expect(component.rsvpFontSize).toBe('min(clamp(32.0px, 10.00cqw, 30.00cqh), calc(50cqw / 0.93))'); // "um": side of 1 char + half pivot
+      component.increaseFontSize(); // 24 / 20 = 1.2x
+      expect(component.rsvpFontSize).toContain('clamp(38.4px, 12.00cqw, 36.00cqh)');
+      // the reader must span the available width, or the box (and the font) cannot grow
+      expect(getComputedStyle(el).display).toBe('flex');
+      expect(el.classList).toContain('w-full');
+    });
+
     it('applies font family, line height and text width', () => {
       component.setPref('fontFamily', 'serif');
       component.setPref('lineHeight', 2);

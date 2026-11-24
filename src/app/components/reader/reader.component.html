@@ -17,7 +17,7 @@
     </div>
   } @else {
     <!-- RSVP: the pivot letter stays centered so the eyes do not move between chunks -->
-    <div class="h-[50dvh] flex flex-col items-center justify-center gap-2 overflow-hidden [container-type:inline-size]">
+    <div class="h-[50dvh] flex flex-col items-center justify-center gap-2 overflow-hidden [container-type:size]">
       <span class="w-px h-4 bg-gray-400 dark:bg-gray-500" aria-hidden="true"></span>
       <p class="rsvp grid grid-cols-[1fr_auto_1fr] w-full whitespace-pre leading-none" [style.fontSize]="rsvpFontSize"
         [attr.aria-label]="rsvpParts.before + rsvpParts.pivot + rsvpParts.after">
