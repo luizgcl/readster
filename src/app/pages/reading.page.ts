@@ -2,6 +2,7 @@ import { afterNextRender, Component, inject, input, signal, viewChild } from '@a
 import { Router, RouterLink } from '@angular/router';
 import { ReaderComponent } from '../components/reader/reader.component';
 import { loadLibrary } from '../preferences';
+import { setPageSeo } from '../seo';
 import { ConfirmService } from '../components/confirm-dialog.component';
 import { UNSAVED_ID, UnsavedText } from './new-reading.page';
 
@@ -46,6 +47,8 @@ export class ReadingPage {
   notFound = signal(false);
 
   constructor() {
+    // Saved texts live only in each visitor's browser: never index reading pages.
+    setPageSeo({ path: '/app', index: false });
     // The library lives in localStorage, which only exists in the browser.
     afterNextRender(() => {
       if (this.id() === UNSAVED_ID) {

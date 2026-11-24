@@ -1,6 +1,7 @@
 import { afterNextRender, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { setPageSeo } from '../seo';
 import { formatDuration } from '../reading';
 import { ConfirmService } from '../components/confirm-dialog.component';
 import { clearStats, LibraryItem, loadLibrary, loadStats, ReadingStats, removeFromLibrary } from '../preferences';
@@ -82,6 +83,7 @@ export class LibraryPage {
   stats = signal<ReadingStats>({ words: 0, ms: 0 });
 
   constructor() {
+    setPageSeo({ path: '/app', index: false });
     afterNextRender(() => {
       this.library.set(loadLibrary());
       this.stats.set(loadStats());

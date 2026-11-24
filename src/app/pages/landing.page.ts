@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ReaderComponent } from '../components/reader/reader.component';
 import { ThemeToggleComponent } from '../components/theme-toggle.component';
+import { setPageSeo, setStructuredData, SITE_DESCRIPTION, SITE_URL } from '../seo';
 
 /** Sample for the live demo: original text, short enough to finish in a minute. */
 const DEMO_TEXT = `Um texto, uma palavra de cada vez
@@ -196,6 +197,33 @@ const FAQ: { q: string; a: string }[] = [
   `,
 })
 export class LandingPage {
+  constructor() {
+    setPageSeo({ path: '/', description: SITE_DESCRIPTION, index: true });
+    // Describes the app and the FAQ to search engines (rendered into the prerendered HTML).
+    setStructuredData('ld-app', {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: 'Readster',
+      url: SITE_URL + '/',
+      description: SITE_DESCRIPTION,
+      applicationCategory: 'EducationalApplication',
+      operatingSystem: 'Qualquer navegador moderno',
+      inLanguage: 'pt-BR',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'BRL' },
+      image: SITE_URL + '/og-image.png',
+    });
+    setStructuredData('ld-faq', {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: FAQ.map(item => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+      })),
+    });
+  }
+
   readonly demoText = DEMO_TEXT;
   readonly faq = FAQ;
   readonly promises = ['Grátis e sem cadastro', 'Seu texto não sai do navegador', 'No celular e no computador'];
