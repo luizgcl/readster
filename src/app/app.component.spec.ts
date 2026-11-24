@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
 import { appConfig } from './app.config';
-import { addToLibrary, loadLibrary, loadPrefs, updateProgress } from './preferences';
+import { addReadingStats, addToLibrary, loadLibrary, loadPrefs, loadStats, updateProgress } from './preferences';
 import { makePdf } from './pdf.spec';
 
 describe('AppComponent', () => {
@@ -104,6 +104,23 @@ describe('AppComponent', () => {
     await fixture.whenStable();
     expect(loadLibrary()).toEqual([]);
     expect(el.querySelector('#library-title')).toBeNull();
+  });
+
+  it('should show a discreet reading summary that can be reset', async () => {
+    addToLibrary('um texto');
+    await create();
+    expect(el.querySelector('#reading-stats')).withContext('nothing read yet').toBeNull();
+
+    addReadingStats(1250, 5 * 60_000);
+    app.handleQuitReading(); // reloads library and stats, as after a reading
+    await fixture.whenStable();
+    expect(el.querySelector('#reading-stats')?.textContent).toContain('Você leu 1.250 palavras em 5 min, média de 250 palavras/min.');
+
+    spyOn(window, 'confirm').and.returnValue(true);
+    button('Zerar estatísticas de leitura').click();
+    await fixture.whenStable();
+    expect(loadStats()).toEqual({ words: 0, ms: 0 });
+    expect(el.querySelector('#reading-stats')).toBeNull();
   });
 
   it('should still read, with a warning, when the text cannot be saved', async () => {

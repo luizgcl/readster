@@ -3,9 +3,9 @@ import { DOCUMENT } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ReaderComponent } from './components/reader/reader.component';
 import { LucideAngularModule } from 'lucide-angular';
-import { countWords, formatReadingTime } from './reading';
+import { countWords, formatDuration, formatReadingTime } from './reading';
 import {
-  addToLibrary, LibraryItem, LIMITS, loadLibrary, loadPrefs, removeFromLibrary, savePrefs, Theme,
+  addToLibrary, clearStats, LibraryItem, loadStats, ReadingStats, LIMITS, loadLibrary, loadPrefs, removeFromLibrary, savePrefs, Theme,
 } from './preferences';
 import { extractPdfText, PdfImportError } from './pdf';
 
@@ -43,6 +43,7 @@ export class AppComponent {
 
   // Browser-only state, filled after hydration so it never mismatches the server render.
   library = signal<LibraryItem[]>([]);
+  stats = signal<ReadingStats>({ words: 0, ms: 0 });
   theme = signal<Theme>('auto');
   wpm = signal<number>(LIMITS.wpm.default);
 
@@ -58,6 +59,7 @@ export class AppComponent {
       this.theme.set(prefs.theme);
       this.wpm.set(prefs.wpm);
       this.library.set(loadLibrary());
+    this.stats.set(loadStats());
 
       const media = window.matchMedia?.('(prefers-color-scheme: dark)');
       const onSystemChange = () => this.applyTheme();
@@ -104,6 +106,22 @@ export class AppComponent {
     if (confirm(`Excluir "${item.title}" da biblioteca? Esta ação não pode ser desfeita.`)) {
       removeFromLibrary(item.id);
       this.library.set(loadLibrary());
+    }
+  }
+
+  /** One discreet line about timed reading; empty until there is something to show. */
+  get statsSummary(): string {
+    const { words, ms } = this.stats();
+    if (!words || !ms) return '';
+    const wpm = Math.round(words / (ms / 60000));
+    return `Você leu ${words.toLocaleString('pt-BR')} palavras em ${formatDuration(ms)}, `
+      + `média de ${wpm} palavras/min.`;
+  }
+
+  resetStats() {
+    if (confirm('Zerar suas estatísticas de leitura? Esta ação não pode ser desfeita.')) {
+      clearStats();
+      this.stats.set(loadStats());
     }
   }
 
@@ -163,6 +181,7 @@ export class AppComponent {
     this.form.reset()
     this.wpm.set(loadPrefs().wpm);
     this.library.set(loadLibrary());
+    this.stats.set(loadStats());
   }
 
   private open(text: string, startIndex: number, itemId: string | null) {

@@ -2,7 +2,7 @@ import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testin
 
 import { ReaderComponent } from './reader.component';
 import { appConfig } from '../../app.config';
-import { addToLibrary, loadLibrary, loadPrefs, savePrefs } from '../../preferences';
+import { addToLibrary, loadLibrary, loadPrefs, loadStats, savePrefs } from '../../preferences';
 
 describe('ReaderComponent', () => {
   let component: ReaderComponent;
@@ -144,6 +144,31 @@ describe('ReaderComponent', () => {
       component.play(); // playing again from the end starts over
       expect(component.highlightedIndex).toBe(0);
       component.pause();
+    }));
+
+    it('records timed reading, leaving out paused and idle time', fakeAsync(() => {
+      component.play();
+      tick(1000 + 2000); // "um", "dois."
+      component.pause();
+      expect(loadStats()).toEqual({ words: 2, ms: 3000 });
+
+      tick(60_000); // paused: nothing counts, even when stepping by hand right after
+      component.highlightNextWord();
+      expect(loadStats().words).toBe(2);
+
+      tick(800);
+      component.highlightNextWord(); // already at the last word: no step, nothing counted
+      expect(loadStats().words).toBe(2);
+      component.highlightPreviousWord();
+      tick(31_000); // reader away for too long
+      component.highlightNextWord();
+      expect(loadStats()).toEqual({ words: 2, ms: 3000 });
+
+      component.highlightPreviousWord();
+      component.play();
+      tick(1000 + 1000); // "três", then "quatro" finishes the text: both counted
+      expect(component.completed).toBeTrue();
+      expect(loadStats()).toEqual({ words: 4, ms: 5000 });
     }));
 
     it('clears the timer when destroyed', fakeAsync(() => {

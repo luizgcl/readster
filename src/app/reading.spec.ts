@@ -1,5 +1,7 @@
-import { chunkDelayMs, countWords, formatReadingTime, splitAtPivot, tokenize } from './reading';
-import { addToLibrary, loadLibrary, loadPrefs, removeFromLibrary, savePrefs, updateProgress } from './preferences';
+import { chunkDelayMs, countWords, formatDuration, formatReadingTime, splitAtPivot, tokenize } from './reading';
+import {
+  addReadingStats, addToLibrary, clearStats, loadLibrary, loadPrefs, loadStats, removeFromLibrary, savePrefs, updateProgress,
+} from './preferences';
 
 describe('reading', () => {
   it('tokenize keeps paragraphs and ignores empty words', () => {
@@ -36,6 +38,12 @@ describe('reading', () => {
   it('formatReadingTime', () => {
     expect(formatReadingTime(100, 250)).toBe('menos de 1 min');
     expect(formatReadingTime(750, 250)).toBe('~3 min');
+  });
+
+  it('formatDuration', () => {
+    expect(formatDuration(59_999)).toBe('menos de 1 min');
+    expect(formatDuration(42 * 60_000)).toBe('42 min');
+    expect(formatDuration(65 * 60_000)).toBe('1 h 05 min');
   });
 });
 
@@ -129,4 +137,20 @@ describe('library', () => {
     expect(loadLibrary().length).toBe(1);
   });
 
+});
+
+describe('reading stats', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('accumulates, clears and ignores tampered values', () => {
+    expect(loadStats()).toEqual({ words: 0, ms: 0 });
+    addReadingStats(3, 1000);
+    addReadingStats(2, 500);
+    expect(loadStats()).toEqual({ words: 5, ms: 1500 });
+    clearStats();
+    expect(loadStats()).toEqual({ words: 0, ms: 0 });
+    localStorage.setItem('readster:stats', JSON.stringify({ words: -1, ms: 'x' }));
+    expect(loadStats()).toEqual({ words: 0, ms: 0 });
+  });
 });
