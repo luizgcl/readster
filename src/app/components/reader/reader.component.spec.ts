@@ -2,7 +2,7 @@ import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testin
 
 import { ReaderComponent } from './reader.component';
 import { appConfig } from '../../app.config';
-import { loadPrefs, loadSession, savePrefs } from '../../preferences';
+import { addToLibrary, loadLibrary, loadPrefs, savePrefs } from '../../preferences';
 
 describe('ReaderComponent', () => {
   let component: ReaderComponent;
@@ -15,6 +15,7 @@ describe('ReaderComponent', () => {
     el = fixture.nativeElement;
     fixture.componentRef.setInput('text', text);
     fixture.componentRef.setInput('startIndex', startIndex);
+    fixture.componentRef.setInput('itemId', addToLibrary(text)!.id);
     fixture.detectChanges();
   }
 
@@ -28,6 +29,9 @@ describe('ReaderComponent', () => {
   });
 
   afterEach(() => localStorage.clear());
+
+  /** Saved position of the text currently open in the reader. */
+  const savedIndex = () => loadLibrary().find(item => item.text === component.text())?.index;
 
   const highlighted = () => Array.from(el.querySelectorAll('.highlight')).map(e => e.textContent);
   const button = (label: string) => el.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
@@ -127,13 +131,13 @@ describe('ReaderComponent', () => {
       component.pause();
     }));
 
-    it('stops at the end, marks completion and clears the saved session', fakeAsync(() => {
+    it('stops at the end, marks completion and saves 100% progress', fakeAsync(() => {
       component.play();
       tick(1000 + 2000 + 1000 + 1000);
       expect(component.playing).toBeFalse();
       expect(component.completed).toBeTrue();
       expect(component.highlightedIndex).toBe(3);
-      expect(loadSession()).toBeNull();
+      expect(savedIndex()).toBe(4); // = word count
       fixture.detectChanges();
       expect(el.textContent).toContain('Leitura concluída');
 
@@ -185,9 +189,9 @@ describe('ReaderComponent', () => {
       expect(component.highlightWords).toBe(3);
     });
 
-    it('saves the session on every move and resumes from startIndex', () => {
+    it('saves progress on every move and resumes from startIndex', () => {
       component.highlightNextWord();
-      expect(loadSession()).toEqual({ text: '  um  dois\ntrês   quatro cinco ', index: 1 });
+      expect(savedIndex()).toBe(1);
 
       savePrefs({ highlightWords: 1 });
       create('um dois três', 2);
@@ -196,12 +200,19 @@ describe('ReaderComponent', () => {
     });
   });
 
+  it('reads without saving when there is no library item', () => {
+    fixture.componentRef.setInput('itemId', null);
+    localStorage.clear();
+    component.highlightNextWord();
+    expect(loadLibrary()).toEqual([]);
+  });
+
   describe('P2 modes and typography', () => {
     it('jumps to a clicked word', () => {
       (el.querySelector('[data-i="3"]') as HTMLElement).click();
       fixture.detectChanges();
       expect(highlighted()).toEqual(['quatro']);
-      expect(loadSession()?.index).toBe(3);
+      expect(savedIndex()).toBe(3);
     });
 
     it('focus mode hides settings only while playing, toggled with F', fakeAsync(() => {

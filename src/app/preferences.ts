@@ -1,3 +1,5 @@
+import { countWords } from './reading';
+
 export type Theme = 'auto' | 'light' | 'dark';
 /** highlight: full text with highlighted words; rsvp: one chunk at a time in a fixed spot. */
 export type ReadingMode = 'highlight' | 'rsvp';
@@ -30,13 +32,21 @@ export interface Prefs {
   textWidth: TextWidth;
 }
 
-export interface Session {
+/** A text saved in the local library, with the reading position. */
+export interface LibraryItem {
+  id: string;
+  title: string;
   text: string;
+  /** Word index to resume from; equal to `words` when finished. */
   index: number;
+  words: number;
+  updatedAt: number;
 }
 
 const PREFS_KEY = 'readster:prefs';
-const SESSION_KEY = 'readster:session';
+const LIBRARY_KEY = 'readster:library';
+/** Single saved reading from before the library existed; migrated on first load. */
+const LEGACY_SESSION_KEY = 'readster:session';
 
 // localStorage is missing on the server and may throw (private mode, blocked storage).
 function read(key: string): unknown {
@@ -48,12 +58,15 @@ function read(key: string): unknown {
   }
 }
 
-function write(key: string, value: unknown): void {
+/** Returns false when storage is unavailable or full; reading keeps working without it. */
+function write(key: string, value: unknown): boolean {
   try {
-    if (value === null) globalThis.localStorage?.removeItem(key);
-    else globalThis.localStorage?.setItem(key, JSON.stringify(value));
+    if (!globalThis.localStorage) return false;
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
-    // Persistence is a convenience; reading keeps working without it.
+    return false;
   }
 }
 
@@ -88,13 +101,69 @@ export function savePrefs(patch: Partial<Prefs>): void {
   write(PREFS_KEY, { ...loadPrefs(), ...patch });
 }
 
-export function loadSession(): Session | null {
-  const raw = read(SESSION_KEY) as Partial<Session> | null;
-  if (typeof raw?.text !== 'string' || !raw.text.trim()) return null;
-  const index = typeof raw.index === 'number' && raw.index >= 0 ? Math.floor(raw.index) : 0;
-  return { text: raw.text, index };
+function titleFor(text: string): string {
+  const firstLine = text.trim().split('\n')[0].trim().replace(/\s+/g, ' ');
+  return firstLine.length > 60 ? firstLine.slice(0, 59) + '…' : firstLine;
 }
 
-export function saveSession(session: Session | null): void {
-  write(SESSION_KEY, session);
+function isItem(value: unknown): value is LibraryItem {
+  const item = value as LibraryItem;
+  return typeof item?.id === 'string' && typeof item.text === 'string' && item.text.trim() !== ''
+    && typeof item.index === 'number' && typeof item.updatedAt === 'number';
+}
+
+/** Saved texts, most recent first. Invalid entries are dropped. */
+export function loadLibrary(): LibraryItem[] {
+  const raw = read(LIBRARY_KEY);
+  if (raw === null) {
+    return migrateLegacySession();
+  }
+  return (Array.isArray(raw) ? raw.filter(isItem) : [])
+    .map(item => ({ ...item, title: titleFor(item.text), words: countWords(item.text), index: Math.max(0, Math.floor(item.index)) }))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+function migrateLegacySession(): LibraryItem[] {
+  const legacy = read(LEGACY_SESSION_KEY) as { text?: unknown; index?: unknown } | null;
+  if (typeof legacy?.text !== 'string' || !legacy.text.trim()) return [];
+  const item = newItem(legacy.text, typeof legacy.index === 'number' ? Math.max(0, Math.floor(legacy.index)) : 0);
+  if (write(LIBRARY_KEY, [item])) write(LEGACY_SESSION_KEY, null);
+  return [item];
+}
+
+function newItem(text: string, index = 0): LibraryItem {
+  return {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    title: titleFor(text),
+    text,
+    index,
+    words: countWords(text),
+    updatedAt: Date.now(),
+  };
+}
+
+/**
+ * Adds a text to the library (or moves an identical saved text to the top, keeping its position).
+ * Returns null when it could not be saved, e.g. storage is full.
+ */
+export function addToLibrary(text: string): LibraryItem | null {
+  const library = loadLibrary();
+  const existing = library.find(item => item.text === text);
+  const item = existing ? { ...existing, updatedAt: Date.now() } : newItem(text);
+  const saved = write(LIBRARY_KEY, [item, ...library.filter(other => other.id !== item.id)]);
+  return saved ? item : null;
+}
+
+export function updateProgress(id: string, index: number): void {
+  const library = loadLibrary();
+  const item = library.find(other => other.id === id);
+  if (item) {
+    item.index = index;
+    item.updatedAt = Date.now();
+    write(LIBRARY_KEY, library);
+  }
+}
+
+export function removeFromLibrary(id: string): void {
+  write(LIBRARY_KEY, loadLibrary().filter(item => item.id !== id));
 }

@@ -1,5 +1,5 @@
 import { chunkDelayMs, countWords, formatReadingTime, splitAtPivot, tokenize } from './reading';
-import { loadPrefs, loadSession, savePrefs, saveSession } from './preferences';
+import { addToLibrary, loadLibrary, loadPrefs, removeFromLibrary, savePrefs, updateProgress } from './preferences';
 
 describe('reading', () => {
   it('tokenize keeps paragraphs and ignores empty words', () => {
@@ -68,12 +68,65 @@ describe('preferences', () => {
     localStorage.setItem('readster:prefs', '{nope');
     expect(loadPrefs().wpm).toBe(250);
   });
+});
 
-  it('saves, loads and clears the session', () => {
-    expect(loadSession()).toBeNull();
-    saveSession({ text: 'um dois', index: 1 });
-    expect(loadSession()).toEqual({ text: 'um dois', index: 1 });
-    saveSession(null);
-    expect(loadSession()).toBeNull();
+describe('library', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('adds texts with title and word count, most recent first', () => {
+    expect(loadLibrary()).toEqual([]);
+    const first = addToLibrary('Primeiro título\ncorpo do texto')!;
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date(Date.now() + 1000));
+    const second = addToLibrary('  Segundo   texto  ')!;
+    jasmine.clock().uninstall();
+
+    expect(first.title).toBe('Primeiro título');
+    expect(first.words).toBe(5);
+    expect(second.title).toBe('Segundo texto');
+    expect(loadLibrary().map(item => item.id)).toEqual([second.id, first.id]);
   });
+
+  it('truncates long titles', () => {
+    expect(addToLibrary('a'.repeat(80))!.title).toBe('a'.repeat(59) + '…');
+  });
+
+  it('reuses an identical text instead of duplicating it, keeping its position', () => {
+    const item = addToLibrary('um dois três')!;
+    updateProgress(item.id, 2);
+    const again = addToLibrary('um dois três')!;
+    expect(again.id).toBe(item.id);
+    expect(again.index).toBe(2);
+    expect(loadLibrary().length).toBe(1);
+  });
+
+  it('updates progress and removes items', () => {
+    const item = addToLibrary('um dois')!;
+    updateProgress(item.id, 1);
+    expect(loadLibrary()[0].index).toBe(1);
+    removeFromLibrary(item.id);
+    expect(loadLibrary()).toEqual([]);
+  });
+
+  it('returns null when storage is full', () => {
+    spyOn(Storage.prototype, 'setItem').and.throwError(new DOMException('full', 'QuotaExceededError'));
+    expect(addToLibrary('um dois')).toBeNull();
+  });
+
+  it('drops invalid entries and survives corrupted data', () => {
+    localStorage.setItem('readster:library', JSON.stringify([{ id: 'x', text: '', index: 0, updatedAt: 1 }, 'junk']));
+    expect(loadLibrary()).toEqual([]);
+    localStorage.setItem('readster:library', '{nope');
+    expect(loadLibrary()).toEqual([]);
+  });
+
+  it('migrates the single saved reading from before the library', () => {
+    localStorage.setItem('readster:session', JSON.stringify({ text: 'texto antigo aqui', index: 1 }));
+    const [item] = loadLibrary();
+    expect(item).toEqual(jasmine.objectContaining({ text: 'texto antigo aqui', index: 1, words: 3 }));
+    expect(localStorage.getItem('readster:session')).toBeNull();
+    expect(loadLibrary().length).toBe(1);
+  });
+
 });

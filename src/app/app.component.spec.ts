@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
 import { appConfig } from './app.config';
-import { loadPrefs, saveSession } from './preferences';
+import { addToLibrary, loadLibrary, loadPrefs, updateProgress } from './preferences';
 
 describe('AppComponent', () => {
   let fixture: ComponentFixture<AppComponent>;
@@ -38,7 +38,7 @@ describe('AppComponent', () => {
   it('should render title and value proposition', async () => {
     await create();
     expect(el.querySelector('h1')?.textContent).toContain('Readster');
-    expect(el.textContent).toContain('Seu texto fica apenas no seu navegador');
+    expect(el.textContent).toContain('Seus textos ficam salvos apenas no seu navegador');
   });
 
   it('should not start reading with empty or whitespace-only text', async () => {
@@ -57,31 +57,91 @@ describe('AppComponent', () => {
     expect(el.querySelector('#text-stats')?.textContent).toContain('3 palavras · menos de 1 min a 250 palavras/min');
   });
 
-  it('should start reading with text and offer to continue after quitting', async () => {
+  const libraryText = () => el.querySelector('[aria-labelledby="library-title"]')?.textContent ?? '';
+  const button = (label: string) => el.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+
+  it('should save the text to the library and resume from where it stopped', async () => {
     await create();
+    expect(el.querySelector('#library-title')).toBeNull();
     await submit('um dois três quatro');
     expect(el.querySelector('app-reader')).toBeTruthy();
-    (el.querySelector('button[aria-label="Próximas palavras"]') as HTMLButtonElement).click();
+    button('Próximas palavras').click();
     await fixture.whenStable();
 
     el.querySelector<HTMLButtonElement>('app-reader button.bg-red-300')!.click();
     await fixture.whenStable();
     expect(app.isReaderMode).toBeFalse();
-    expect(el.textContent).toContain('leitura em andamento (25% lida)');
+    expect(libraryText()).toContain('um dois três quatro');
+    expect(libraryText()).toContain('25% lido');
 
-    app.continueReading();
+    button('Continuar: um dois três quatro').click();
     await fixture.whenStable();
     expect(Array.from(el.querySelectorAll('.highlight')).map(e => e.textContent)).toEqual(['dois']);
   });
 
-  it('should restore a session saved in a previous visit and allow discarding it', async () => {
-    saveSession({ text: 'a b c d', index: 2 });
+  it('should list texts saved in a previous visit and restart finished ones', async () => {
+    const item = addToLibrary('a b c d')!;
+    updateProgress(item.id, 4);
     await create();
-    expect(el.textContent).toContain('(50% lida)');
+    expect(libraryText()).toContain('Concluído');
 
-    app.discardSession();
+    button('Ler de novo: a b c d').click();
     await fixture.whenStable();
-    expect(el.textContent).not.toContain('leitura em andamento');
+    expect(Array.from(el.querySelectorAll('.highlight')).map(e => e.textContent)).toEqual(['a']);
+  });
+
+  it('should delete a text only after confirmation', async () => {
+    addToLibrary('para excluir');
+    await create();
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+    button('Excluir: para excluir').click();
+    await fixture.whenStable();
+    expect(loadLibrary().length).toBe(1);
+
+    confirmSpy.and.returnValue(true);
+    button('Excluir: para excluir').click();
+    await fixture.whenStable();
+    expect(loadLibrary()).toEqual([]);
+    expect(el.querySelector('#library-title')).toBeNull();
+  });
+
+  it('should still read, with a warning, when the text cannot be saved', async () => {
+    await create();
+    spyOn(Storage.prototype, 'setItem').and.throwError(new DOMException('full', 'QuotaExceededError'));
+    await submit('um dois');
+    expect(app.isReaderMode).toBeTrue();
+    expect(el.textContent).toContain('Não foi possível salvar este texto');
+  });
+
+  describe('importing a file', () => {
+    async function pick(file: File) {
+      const input = el.querySelector<HTMLInputElement>('input[type="file"]')!;
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      input.files = transfer.files;
+      input.dispatchEvent(new Event('change'));
+      await new Promise(resolve => setTimeout(resolve, 50)); // file.text() is async
+      await fixture.whenStable();
+    }
+
+    it('fills the text area from a .txt file', async () => {
+      await create();
+      await pick(new File(['Olá, mundo\nsegunda linha'], 'texto.txt', { type: 'text/plain' }));
+      expect(app.form.value.text).toBe('Olá, mundo\nsegunda linha');
+      expect(app.importError).toBe('');
+    });
+
+    it('rejects unsupported, empty and oversized files', async () => {
+      await create();
+      await pick(new File(['%PDF'], 'doc.pdf', { type: 'application/pdf' }));
+      expect(app.importError).toContain('Formato não suportado');
+      await pick(new File(['   '], 'vazio.txt', { type: 'text/plain' }));
+      expect(app.importError).toContain('vazio');
+      await pick(new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'grande.txt', { type: 'text/plain' }));
+      expect(app.importError).toContain('muito grande');
+      expect(el.querySelector('[role="alert"]')?.textContent).toContain('muito grande');
+      expect(app.form.value.text).toBeNull();
+    });
   });
 
   it('should cycle and persist the theme', async () => {

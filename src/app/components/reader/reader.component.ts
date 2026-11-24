@@ -5,7 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { FontSizePipe } from '../../pipes/font-size.pipe';
 import { FormsModule } from '@angular/forms';
 import { chunkDelayMs, formatReadingTime, splitAtPivot, tokenize } from '../../reading';
-import { LIMITS, loadPrefs, OPTIONS, Prefs, savePrefs, saveSession } from '../../preferences';
+import { LIMITS, loadPrefs, OPTIONS, Prefs, savePrefs, updateProgress } from '../../preferences';
 
 type ReaderPref = 'fontSize' | 'highlightWords' | 'wpm' | 'mode' | 'focusMode' | 'fontFamily' | 'lineHeight' | 'textWidth';
 
@@ -35,6 +35,8 @@ export class ReaderComponent implements OnInit {
   text = input.required<string>();
   /** Word index to resume from. */
   startIndex = input(0);
+  /** Library item that receives progress updates; null when the text could not be saved. */
+  itemId = input<string | null>(null);
   quitReading = output();
 
   private tokens = computed(() => tokenize(this.text()));
@@ -162,7 +164,7 @@ export class ReaderComponent implements OnInit {
   private goTo(index: number): void {
     this.highlightedIndex = index;
     this.completed = false;
-    saveSession({ text: this.text(), index });
+    this.saveProgress(index);
     this.scrollToHighlightedWord();
     if (this.playing) {
       this.scheduleNextStep();
@@ -209,7 +211,14 @@ export class ReaderComponent implements OnInit {
   private finish(): void {
     this.pause();
     this.completed = true;
-    saveSession(null);
+    this.saveProgress(this.words().length); // 100% in the library
+  }
+
+  private saveProgress(index: number): void {
+    const id = this.itemId();
+    if (id) {
+      updateProgress(id, index);
+    }
   }
 
   // --- preferences ------------------------------------------------------
