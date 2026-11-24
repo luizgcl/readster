@@ -1,9 +1,10 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { AppComponent } from './app.component';
+import { ThemeToggleComponent } from './components/theme-toggle.component';
+import { LandingPage } from './pages/landing.page';
 import { appConfig } from './app.config';
-import { LibraryPage } from './pages/library.page';
 import { NewReadingPage } from './pages/new-reading.page';
 import { ReadingPage } from './pages/reading.page';
 import { addReadingStats, addToLibrary, loadLibrary, loadPrefs, loadStats, updateProgress } from './preferences';
@@ -19,22 +20,19 @@ afterEach(() => {
   document.documentElement.classList.remove('dark');
 });
 
-describe('AppComponent (shell)', () => {
-  let fixture: ComponentFixture<AppComponent>;
-
-  it('shows the logo linking to the library and cycles the theme', async () => {
-    fixture = TestBed.createComponent(AppComponent);
+describe('ThemeToggleComponent', () => {
+  it('cycles and persists the theme', async () => {
+    const fixture = TestBed.createComponent(ThemeToggleComponent);
     fixture.autoDetectChanges();
     await fixture.whenStable();
-    const app = fixture.componentInstance;
-    expect(fixture.nativeElement.querySelector('a[href="/app"]')?.textContent).toContain('Readster');
+    const toggle = fixture.componentInstance;
 
-    expect(app.theme()).toBe('auto');
-    app.cycleTheme();
-    expect(app.theme()).toBe('light');
+    expect(toggle.theme()).toBe('auto');
+    toggle.cycle();
+    expect(toggle.theme()).toBe('light');
     expect(document.documentElement.classList.contains('dark')).toBeFalse();
-    app.cycleTheme();
-    expect(app.theme()).toBe('dark');
+    toggle.cycle();
+    expect(toggle.theme()).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBeTrue();
     expect(loadPrefs().theme).toBe('dark');
   });
@@ -57,11 +55,14 @@ describe('screens', () => {
   // whenStable runs afterNextRender (localStorage is browser-only) and pending navigations.
   async function settle() {
     await harness.fixture.whenStable();
-    el = harness.routeNativeElement!;
+    el = screen().nativeElement;
   }
 
+  /** The routed screen: inside the app shell for /app routes, the landing page otherwise. */
+  const screen = () => harness.fixture.debugElement.query(By.css('app-shell router-outlet + *')) ?? harness.routeDebugElement!;
+
   const button = (label: string) => el.querySelector<HTMLElement>(`[aria-label="${label}"]`)!;
-  const page = <T>() => harness.routeDebugElement!.componentInstance as T;
+  const page = <T>() => screen().componentInstance as T;
   const path = () => TestBed.inject(Router).url;
 
   describe('library', () => {
@@ -217,8 +218,26 @@ describe('screens', () => {
     expect(el.textContent).toContain('Texto não encontrado');
   });
 
-  it('opens the library for unknown addresses', async () => {
+  it('sends unknown addresses to the landing page', async () => {
     await go('/qualquer-coisa');
-    expect(page<unknown>()).toBeInstanceOf(LibraryPage);
+    expect(page<unknown>()).toBeInstanceOf(LandingPage);
+  });
+
+  describe('landing page', () => {
+    it('presents the app with calls to open it, sections and honest answers', async () => {
+      await go('/');
+      expect(el.querySelector('h1')?.textContent).toContain('Leia no seu ritmo');
+      expect(el.querySelectorAll('a[href="/app"]').length).toBeGreaterThan(1);
+      expect(el.querySelector('a[href="/app/nova"]')?.textContent).toContain('Começar a ler');
+      for (const id of ['demo', 'como-funciona', 'perguntas']) {
+        expect(el.querySelector('#' + id)).withContext(id).toBeTruthy();
+      }
+      expect(el.querySelector('#perguntas')?.textContent).toContain('Não prometemos isso');
+    });
+
+    it('shows the logo link to the library inside the app', async () => {
+      await go('/app');
+      expect(el.ownerDocument.querySelector('app-shell a[href="/app"]')?.textContent).toContain('Readster');
+    });
   });
 });
