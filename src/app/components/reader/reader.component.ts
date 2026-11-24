@@ -5,7 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { FontSizePipe } from '../../pipes/font-size.pipe';
 import { FormsModule } from '@angular/forms';
 import { chunkDelayMs, formatReadingTime, splitAtPivot, tokenize } from '../../reading';
-import { addReadingStats, LIMITS, loadPrefs, OPTIONS, Prefs, savePrefs, updateProgress } from '../../preferences';
+import { addReadingStats, LIMITS, loadPrefs, OPTIONS, Prefs, savePrefs, titleFor, updateProgress } from '../../preferences';
 
 type ReaderPref = 'fontSize' | 'highlightWords' | 'wpm' | 'mode' | 'focusMode' | 'fontFamily' | 'lineHeight' | 'textWidth';
 
@@ -42,6 +42,7 @@ export class ReaderComponent implements OnInit {
   itemId = input<string | null>(null);
   quitReading = output();
 
+  readonly title = computed(() => titleFor(this.text()));
   private tokens = computed(() => tokenize(this.text()));
   words = computed(() => this.tokens().words);
   paragraphs = computed(() => this.tokens().paragraphs);
