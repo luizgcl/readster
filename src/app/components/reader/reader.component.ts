@@ -4,8 +4,16 @@ import {
 import { LucideAngularModule } from 'lucide-angular';
 import { FontSizePipe } from '../../pipes/font-size.pipe';
 import { FormsModule } from '@angular/forms';
-import { chunkDelayMs, formatReadingTime, tokenize } from '../../reading';
-import { LIMITS, loadPrefs, savePrefs, saveSession } from '../../preferences';
+import { chunkDelayMs, formatReadingTime, splitAtPivot, tokenize } from '../../reading';
+import { LIMITS, loadPrefs, OPTIONS, Prefs, savePrefs, saveSession } from '../../preferences';
+
+type ReaderPref = 'fontSize' | 'highlightWords' | 'wpm' | 'mode' | 'focusMode' | 'fontFamily' | 'lineHeight' | 'textWidth';
+
+const TEXT_WIDTH_CLASS: Record<Prefs['textWidth'], string> = {
+  narrow: 'max-w-[55ch]',
+  medium: 'max-w-[70ch]',
+  wide: 'max-w-none',
+};
 
 @Component({
   selector: 'app-reader',
@@ -16,7 +24,8 @@ import { LIMITS, loadPrefs, savePrefs, saveSession } from '../../preferences';
 })
 export class ReaderComponent implements OnInit {
   private injector = inject(Injector);
-  private textContainer = viewChild.required<ElementRef<HTMLElement>>('textContainer');
+  // Absent in RSVP mode.
+  private textContainer = viewChild<ElementRef<HTMLElement>>('textContainer');
 
   text = input.required<string>();
   /** Word index to resume from. */
@@ -28,12 +37,30 @@ export class ReaderComponent implements OnInit {
   paragraphs = computed(() => this.tokens().paragraphs);
 
   readonly limits = LIMITS;
+  readonly options = OPTIONS;
+  readonly labels: Record<string, string> = {
+    highlight: 'Texto completo',
+    rsvp: 'Palavra a palavra',
+    sans: 'Sem serifa',
+    serif: 'Com serifa',
+    '1.5': 'Compacta',
+    '1.75': 'Normal',
+    '2': 'Ampla',
+    narrow: 'Estreita',
+    medium: 'Média',
+    wide: 'Larga',
+  };
   readonly highlightOptions = Array.from({ length: LIMITS.highlightWords.max }, (_, i) => i + 1);
 
   private prefs = loadPrefs();
   fontSize = this.prefs.fontSize;
   highlightWords = this.prefs.highlightWords;
   wpm = this.prefs.wpm;
+  mode = this.prefs.mode;
+  focusMode = this.prefs.focusMode;
+  fontFamily = this.prefs.fontFamily;
+  lineHeight = this.prefs.lineHeight;
+  textWidth = this.prefs.textWidth;
 
   highlightedIndex = 0;
   playing = false;
@@ -73,6 +100,39 @@ export class ReaderComponent implements OnInit {
 
   get remainingTime(): string {
     return formatReadingTime(this.words().length - this.wordsRead, this.wpm);
+  }
+
+  /** Current chunk split at its recognition point, for RSVP mode. */
+  get rsvpParts() {
+    const chunk = this.words().slice(this.highlightedIndex, this.highlightedIndex + this.highlightWords);
+    return splitAtPivot(chunk.join(' '));
+  }
+
+  /**
+   * Twice the reading font size, shrunk so the longer side of the pivot fits in half the box.
+   * ponytail: assumes ~0.62em per glyph; very wide glyphs (e.g. "WWW") may still clip.
+   */
+  get rsvpFontSize(): string {
+    const { before, after } = this.rsvpParts;
+    const sideChars = Math.max(before.length, after.length) + 0.5;
+    return `min(${this.fontSize * 2}px, calc(50cqw / ${(sideChars * 0.62).toFixed(2)}))`;
+  }
+
+  /** Focus mode hides everything but the text and playback controls while playing. */
+  get hideSettings(): boolean {
+    return this.focusMode && this.playing;
+  }
+
+  get textWidthClass(): string {
+    return TEXT_WIDTH_CLASS[this.textWidth];
+  }
+
+  /** Jumps to a clicked word (event delegation keeps thousands of words out of the tab order). */
+  onTextClick(event: MouseEvent): void {
+    const index = (event.target as HTMLElement).closest<HTMLElement>('[data-i]')?.dataset['i'];
+    if (index !== undefined) {
+      this.goTo(Number(index));
+    }
   }
 
   // --- navigation -------------------------------------------------------
@@ -159,18 +219,24 @@ export class ReaderComponent implements OnInit {
   }
 
   private setFontSize(size: number): void {
-    this.fontSize = Math.min(LIMITS.fontSize.max, Math.max(LIMITS.fontSize.min, size));
-    savePrefs({ fontSize: this.fontSize });
+    this.setPref('fontSize', Math.min(LIMITS.fontSize.max, Math.max(LIMITS.fontSize.min, size)));
   }
 
   onHighlightWordsChange(value: number): void {
-    this.highlightWords = value;
-    savePrefs({ highlightWords: value });
+    this.setPref('highlightWords', value);
   }
 
   onWpmChange(value: number): void {
-    this.wpm = value;
-    savePrefs({ wpm: value });
+    this.setPref('wpm', value);
+  }
+
+  /** Updates a reader preference and persists it. */
+  setPref<K extends ReaderPref>(key: K, value: Prefs[K]): void {
+    (this as Pick<Prefs, ReaderPref>)[key] = value;
+    savePrefs({ [key]: value });
+    if (key === 'mode' && value === 'highlight') {
+      this.scrollToHighlightedWord(); // the text box was just recreated
+    }
   }
 
   // --- keyboard ---------------------------------------------------------
@@ -199,6 +265,10 @@ export class ReaderComponent implements OnInit {
       case '-':
         this.decreaseFontSize();
         break;
+      case 'f':
+      case 'F':
+        this.setPref('focusMode', !this.focusMode);
+        break;
       default:
         return;
     }
@@ -211,9 +281,9 @@ export class ReaderComponent implements OnInit {
   // Only scrolls when the word leaves the middle of the box, to avoid constant motion while playing.
   private scrollToHighlightedWord(): void {
     afterNextRender(() => {
-      const container = this.textContainer().nativeElement;
-      const element = container.querySelector<HTMLElement>('.highlight');
-      if (!element) return;
+      const container = this.textContainer()?.nativeElement;
+      const element = container?.querySelector<HTMLElement>('.highlight');
+      if (!container || !element) return;
       const box = container.getBoundingClientRect();
       const word = element.getBoundingClientRect();
       const margin = box.height * 0.25;
