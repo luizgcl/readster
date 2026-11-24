@@ -301,6 +301,31 @@ describe('ReaderComponent', () => {
     });
   });
 
+  describe('embedded demo', () => {
+    beforeEach(() => {
+      fixture.componentRef.setInput('embedded', true);
+      fixture.componentRef.setInput('itemId', null);
+      fixture.detectChanges();
+    });
+
+    it('hides the back button and leaves page keys alone unless focused', () => {
+      expect(el.querySelector('[aria-label="Voltar à biblioteca"]')).toBeNull();
+      key('ArrowRight'); // focus on the page body: the page keeps scrolling
+      expect(component.highlightedIndex).toBe(0);
+      key('ArrowRight', button('Próximas palavras').parentElement!);
+      expect(component.highlightedIndex).toBe(1);
+    });
+
+    it('does not count demo reading in the stats', fakeAsync(() => {
+      component.onWpmChange(60);
+      component.play();
+      tick(3000);
+      component.pause();
+      expect(component.highlightedIndex).toBeGreaterThan(0);
+      expect(loadStats().words).toBe(0);
+    }));
+  });
+
   describe('settings and speed', () => {
     it('opens the settings drawer and changes font size with a visible value', () => {
       button('Ajustes de leitura').click();

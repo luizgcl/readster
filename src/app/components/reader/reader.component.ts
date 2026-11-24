@@ -45,6 +45,12 @@ export class ReaderComponent implements OnInit {
   /** Library item that receives progress updates; null when the text could not be saved. */
   itemId = input<string | null>(null);
   quitReading = output();
+  /**
+   * Demo inside another page (the landing page): no back button, a fixed-height text box,
+   * shortcuts only while focus is inside the reader, and no reading stats.
+   */
+  embedded = input(false);
+  private host = inject(ElementRef<HTMLElement>).nativeElement as HTMLElement;
 
   readonly title = computed(() => titleFor(this.text()));
   private tokens = computed(() => tokenize(this.text()));
@@ -244,6 +250,7 @@ export class ReaderComponent implements OnInit {
 
   /** Counts the chunk being left as read, if it was on screen for a plausible time. */
   private recordReading(): void {
+    if (this.embedded()) return;
     const elapsed = this.shownAt ? Date.now() - this.shownAt : 0;
     if (elapsed > 0 && elapsed <= MAX_CHUNK_MS) {
       addReadingStats(Math.min(this.highlightWords, this.words().length - this.highlightedIndex), elapsed);
@@ -317,6 +324,10 @@ export class ReaderComponent implements OnInit {
     const target = event.target as HTMLElement | null;
     // Leave form fields (range/select use arrows) and modified shortcuts to the browser.
     if (event.ctrlKey || event.metaKey || event.altKey || target?.closest('input, select, textarea')) {
+      return;
+    }
+    // Embedded on a page: Space and arrows keep scrolling the page unless the reader has focus.
+    if (this.embedded() && !(target && this.host.contains(target))) {
       return;
     }
     switch (event.key) {

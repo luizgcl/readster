@@ -1,9 +1,11 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { AppComponent } from './app.component';
+import { ThemeToggleComponent } from './components/theme-toggle.component';
+import { ConfirmDialogComponent, ConfirmService } from './components/confirm-dialog.component';
+import { LandingPage } from './pages/landing.page';
 import { appConfig } from './app.config';
-import { LibraryPage } from './pages/library.page';
 import { NewReadingPage } from './pages/new-reading.page';
 import { ReadingPage } from './pages/reading.page';
 import { addReadingStats, addToLibrary, loadLibrary, loadPrefs, loadStats, updateProgress } from './preferences';
@@ -19,24 +21,48 @@ afterEach(() => {
   document.documentElement.classList.remove('dark');
 });
 
-describe('AppComponent (shell)', () => {
-  let fixture: ComponentFixture<AppComponent>;
-
-  it('shows the logo linking to the library and cycles the theme', async () => {
-    fixture = TestBed.createComponent(AppComponent);
+describe('ThemeToggleComponent', () => {
+  it('cycles and persists the theme', async () => {
+    const fixture = TestBed.createComponent(ThemeToggleComponent);
     fixture.autoDetectChanges();
     await fixture.whenStable();
-    const app = fixture.componentInstance;
-    expect(fixture.nativeElement.querySelector('a[href="/app"]')?.textContent).toContain('Readster');
+    const toggle = fixture.componentInstance;
 
-    expect(app.theme()).toBe('auto');
-    app.cycleTheme();
-    expect(app.theme()).toBe('light');
+    expect(toggle.theme()).toBe('auto');
+    toggle.cycle();
+    expect(toggle.theme()).toBe('light');
     expect(document.documentElement.classList.contains('dark')).toBeFalse();
-    app.cycleTheme();
-    expect(app.theme()).toBe('dark');
+    toggle.cycle();
+    expect(toggle.theme()).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBeTrue();
     expect(loadPrefs().theme).toBe('dark');
+  });
+});
+
+describe('ConfirmDialogComponent', () => {
+  it('asks with the app dialog, focusing the safe choice, and answers once', async () => {
+    const fixture = TestBed.createComponent(ConfirmDialogComponent);
+    fixture.autoDetectChanges();
+    const confirm = TestBed.inject(ConfirmService);
+    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+
+    const answer = confirm.ask({ title: 'Excluir texto?', message: 'Não dá para desfazer.', confirmLabel: 'Excluir', danger: true });
+    await fixture.whenStable();
+    expect(dialog.open).toBeTrue();
+    expect(dialog.textContent).toContain('Não dá para desfazer.');
+    expect(document.activeElement?.textContent?.trim()).toBe('Cancelar');
+    const buttons = dialog.querySelectorAll('button');
+    expect(buttons[1].classList).toContain('btn-danger');
+
+    buttons[1].click();
+    expect(await answer).toBeTrue();
+    await fixture.whenStable();
+    expect(dialog.open).toBeFalse();
+
+    const second = confirm.ask({ title: 'Sair?', message: '', confirmLabel: 'Sair' });
+    await fixture.whenStable();
+    dialog.dispatchEvent(new Event('cancel')); // Esc
+    expect(await second).toBeFalse();
   });
 });
 
@@ -44,7 +70,11 @@ describe('screens', () => {
   let harness: RouterTestingHarness;
   let el: HTMLElement;
 
+  /** Answers for the app's confirmation dialog (it lives in AppComponent, outside the harness). */
+  let ask: jasmine.Spy;
+
   beforeEach(async () => {
+    ask = spyOn(TestBed.inject(ConfirmService), 'ask').and.resolveTo(true);
     harness = await RouterTestingHarness.create();
     harness.fixture.autoDetectChanges();
   });
@@ -57,11 +87,14 @@ describe('screens', () => {
   // whenStable runs afterNextRender (localStorage is browser-only) and pending navigations.
   async function settle() {
     await harness.fixture.whenStable();
-    el = harness.routeNativeElement!;
+    el = screen().nativeElement;
   }
 
+  /** The routed screen: inside the app shell for /app routes, the landing page otherwise. */
+  const screen = () => harness.fixture.debugElement.query(By.css('app-shell router-outlet + *')) ?? harness.routeDebugElement!;
+
   const button = (label: string) => el.querySelector<HTMLElement>(`[aria-label="${label}"]`)!;
-  const page = <T>() => harness.routeDebugElement!.componentInstance as T;
+  const page = <T>() => screen().componentInstance as T;
   const path = () => TestBed.inject(Router).url;
 
   describe('library', () => {
@@ -94,12 +127,13 @@ describe('screens', () => {
     it('deletes a text only after confirmation', async () => {
       addToLibrary('para excluir');
       await go('/app');
-      const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+      const confirmSpy = ask.and.resolveTo(false);
       button('Excluir: para excluir').click();
       await settle();
       expect(loadLibrary().length).toBe(1);
 
-      confirmSpy.and.returnValue(true);
+      expect(confirmSpy.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ title: 'Excluir texto?', danger: true }));
+      confirmSpy.and.resolveTo(true);
       button('Excluir: para excluir').click();
       await settle();
       expect(loadLibrary()).toEqual([]);
@@ -112,7 +146,6 @@ describe('screens', () => {
       await go('/app');
       expect(el.querySelector('#reading-stats')?.textContent).toContain('Você leu 1.250 palavras em 5 min, média de 250 palavras/min.');
 
-      spyOn(window, 'confirm').and.returnValue(true);
       button('Zerar estatísticas de leitura').click();
       await settle();
       expect(loadStats()).toEqual({ words: 0, ms: 0 });
@@ -212,13 +245,62 @@ describe('screens', () => {
     });
   });
 
+  describe('leaving a reading', () => {
+    beforeEach(async () => {
+      const item = addToLibrary('um dois três')!;
+      await go(`/app/ler/${item.id}`);
+    });
+
+    it('asks first and stays when the reader wants to keep reading', async () => {
+      ask.and.resolveTo(false);
+      button('Voltar à biblioteca').click();
+      await settle();
+      expect(ask).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Sair da leitura?', cancelLabel: 'Continuar lendo' }));
+      expect(path()).toMatch(/^\/app\/ler\//);
+    });
+
+    it('leaves when confirmed, also through the logo to the landing page', async () => {
+      ask.and.resolveTo(true);
+      (el.ownerDocument.querySelector('app-shell a[aria-label="Readster: página inicial"]') as HTMLElement).click();
+      await settle();
+      expect(path()).toBe('/');
+    });
+
+    it('does not ask once the text is finished', async () => {
+      const reader = harness.fixture.debugElement.query(By.css('app-reader')).componentInstance;
+      reader.completed = true;
+      button('Voltar à biblioteca').click();
+      await settle();
+      expect(ask).not.toHaveBeenCalled();
+      expect(path()).toBe('/app');
+    });
+  });
+
   it('says when a text is not in this browser', async () => {
     await go('/app/ler/nao-existe');
     expect(el.textContent).toContain('Texto não encontrado');
   });
 
-  it('opens the library for unknown addresses', async () => {
+  it('sends unknown addresses to the landing page', async () => {
     await go('/qualquer-coisa');
-    expect(page<unknown>()).toBeInstanceOf(LibraryPage);
+    expect(page<unknown>()).toBeInstanceOf(LandingPage);
+  });
+
+  describe('landing page', () => {
+    it('presents the app with calls to open it, sections and honest answers', async () => {
+      await go('/');
+      expect(el.querySelector('h1')?.textContent).toContain('Leia no seu ritmo');
+      expect(el.querySelectorAll('a[href="/app"]').length).toBeGreaterThan(1);
+      expect(el.querySelector('a[href="/app/nova"]')?.textContent).toContain('Começar a ler');
+      for (const id of ['demo', 'como-funciona', 'perguntas']) {
+        expect(el.querySelector('#' + id)).withContext(id).toBeTruthy();
+      }
+      expect(el.querySelector('#perguntas')?.textContent).toContain('Não prometemos isso');
+    });
+
+    it('is reachable from the logo inside the app', async () => {
+      await go('/app');
+      expect(el.ownerDocument.querySelector('app-shell a[href="/"]')?.textContent).toContain('Readster');
+    });
   });
 });
