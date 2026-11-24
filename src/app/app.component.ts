@@ -7,8 +7,11 @@ import { countWords, formatReadingTime } from './reading';
 import {
   addToLibrary, LibraryItem, LIMITS, loadLibrary, loadPrefs, removeFromLibrary, savePrefs, Theme,
 } from './preferences';
+import { extractPdfText, PdfImportError } from './pdf';
 
-const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+const MB = 1024 * 1024;
+const MAX_TEXT_BYTES = 5 * MB;
+const MAX_PDF_BYTES = 20 * MB;
 
 const THEME_ORDER: Theme[] = ['auto', 'light', 'dark'];
 const THEME_INFO: Record<Theme, { icon: string; label: string }> = {
@@ -35,6 +38,8 @@ export class AppComponent {
   /** Shown when the text could not be saved (e.g. storage full); reading still works. */
   storageWarning = false;
   importError = '';
+  /** True while a PDF is being read, which can take a few seconds. */
+  importing = false;
 
   // Browser-only state, filled after hydration so it never mismatches the server render.
   library = signal<LibraryItem[]>([]);
@@ -116,16 +121,35 @@ export class AppComponent {
     input.value = ''; // allow picking the same file again
     this.importError = '';
     if (!file) return;
-    if (!(file.type.startsWith('text/') || /\.(txt|md)$/i.test(file.name))) {
-      this.importError = 'Formato não suportado. Escolha um arquivo .txt.';
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    if (!isPdf && !(file.type.startsWith('text/') || /\.(txt|md)$/i.test(file.name))) {
+      this.importError = 'Formato não suportado. Escolha um arquivo .txt ou .pdf.';
       return;
     }
-    if (file.size > MAX_IMPORT_BYTES) {
-      this.importError = 'Arquivo muito grande. O limite é 5 MB.';
+    const limit = isPdf ? MAX_PDF_BYTES : MAX_TEXT_BYTES;
+    if (file.size > limit) {
+      this.importError = `Arquivo muito grande. O limite é ${limit / MB} MB.`;
       return;
     }
-    // ponytail: decodes as UTF-8 only; files in other encodings (e.g. Latin-1) show garbled accents.
-    const text = await file.text();
+    let text: string;
+    if (isPdf) {
+      this.importing = true;
+      try {
+        text = await extractPdfText(file);
+      } catch (error) {
+        this.importError = error instanceof PdfImportError ? error.message : 'Não foi possível ler este PDF.';
+        return;
+      } finally {
+        this.importing = false;
+      }
+      if (!text.trim()) {
+        this.importError = 'Não encontramos texto neste PDF. PDFs escaneados (só imagens) não são suportados.';
+        return;
+      }
+    } else {
+      // ponytail: decodes as UTF-8 only; files in other encodings (e.g. Latin-1) show garbled accents.
+      text = await file.text();
+    }
     if (!text.trim()) {
       this.importError = 'O arquivo está vazio.';
       return;
