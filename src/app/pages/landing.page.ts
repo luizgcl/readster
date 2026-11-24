@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ReaderComponent } from '../components/reader/reader.component';
 import { ThemeToggleComponent } from '../components/theme-toggle.component';
+import { ContributorsComponent, REPO_URL } from '../components/contributors.component';
 import { setPageSeo, setStructuredData, SITE_DESCRIPTION, SITE_URL } from '../seo';
 
 /** Sample for the live demo: original text, short enough to finish in a minute. */
@@ -34,13 +35,13 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Quanto custa?',
-    a: 'Nada. O Readster é gratuito.',
+    a: 'Nada. O Readster é gratuito e de código aberto, sob a licença MIT.',
   },
 ];
 
 @Component({
   selector: 'app-landing-page',
-  imports: [RouterLink, LucideAngularModule, ReaderComponent, ThemeToggleComponent],
+  imports: [RouterLink, LucideAngularModule, ReaderComponent, ThemeToggleComponent, ContributorsComponent],
   host: { class: 'flex flex-col flex-1' },
   template: `
     <a href="#conteudo" class="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 btn btn-secondary z-10">Pular para o conteúdo</a>
@@ -55,7 +56,12 @@ const FAQ: { q: string; a: string }[] = [
           <a href="#demo" class="btn btn-ghost">Demonstração</a>
           <a href="#como-funciona" class="btn btn-ghost">Como funciona</a>
           <a href="#perguntas" class="btn btn-ghost">Perguntas</a>
+          <a href="#codigo-aberto" class="btn btn-ghost">Código aberto</a>
         </nav>
+        <a [href]="repoUrl" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-icon hidden sm:inline-flex"
+          aria-label="Código do Readster no GitHub (abre em nova aba)" title="GitHub">
+          <lucide-icon name="github" size="20" aria-hidden="true" />
+        </a>
         <app-theme-toggle />
         <a routerLink="/app" class="btn btn-primary">Abrir o app</a>
       </div>
@@ -173,6 +179,43 @@ const FAQ: { q: string; a: string }[] = [
         </div>
       </section>
 
+      <!-- Open source -->
+      <section id="codigo-aberto" class="scroll-mt-16 bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800" aria-labelledby="oss-title">
+        <div class="mx-auto max-w-6xl px-4 py-16 grid gap-10 md:grid-cols-2">
+          <div class="flex flex-col gap-4">
+            <h2 id="oss-title" class="text-3xl sm:text-4xl font-bold tracking-tight">Código aberto.</h2>
+            <p class="text-gray-700 dark:text-gray-300">
+              O Readster é open source, sob a licença MIT. Dá para ver como ele funciona, sugerir uma melhoria,
+              relatar um problema ou mandar um pull request. Toda ajuda é bem-vinda, inclusive com textos e traduções.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <a [href]="repoUrl" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                <lucide-icon name="github" size="20" aria-hidden="true" />
+                Ver no GitHub
+              </a>
+              <a [href]="repoUrl + '/issues/new'" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+                <lucide-icon name="bug" size="20" aria-hidden="true" />
+                Relatar um problema
+              </a>
+            </div>
+            <a [href]="repoUrl + '#como-contribuir'" target="_blank" rel="noopener noreferrer" class="self-start underline hover:no-underline rounded focus-ring text-sm">
+              Como contribuir
+            </a>
+          </div>
+          <div class="flex flex-col gap-3">
+            <h3 class="font-semibold">Quem fez o Readster</h3>
+            @defer (on viewport) {
+              <app-contributors />
+            } @placeholder {
+              <p class="text-sm text-gray-600 dark:text-gray-400">Contribuidores</p>
+            }
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              A lista vem do GitHub e é carregada só quando você chega a esta seção.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <!-- Final call -->
       <section class="mx-auto max-w-6xl w-full px-4 pb-20">
         <div class="rounded-2xl bg-brand-500 text-white px-6 py-12 sm:py-16 text-center flex flex-col items-center gap-4">
@@ -191,7 +234,14 @@ const FAQ: { q: string; a: string }[] = [
           <img src="logo.svg" alt="" width="20" height="18" />
           Readster · leitura no seu ritmo
         </p>
-        <a routerLink="/app" class="underline hover:no-underline rounded focus-ring">Abrir o app</a>
+        <div class="flex items-center gap-4">
+          <a [href]="repoUrl" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1 underline hover:no-underline rounded focus-ring">
+            <lucide-icon name="github" size="16" aria-hidden="true" />
+            GitHub
+          </a>
+          <a [href]="repoUrl + '/blob/main/LICENSE'" target="_blank" rel="noopener noreferrer" class="underline hover:no-underline rounded focus-ring">Licença MIT</a>
+          <a routerLink="/app" class="underline hover:no-underline rounded focus-ring">Abrir o app</a>
+        </div>
       </div>
     </footer>
   `,
@@ -212,6 +262,8 @@ export class LandingPage {
       isAccessibleForFree: true,
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'BRL' },
       image: SITE_URL + '/og-image.png',
+      sameAs: [REPO_URL],
+      license: 'https://opensource.org/licenses/MIT',
     });
     setStructuredData('ld-faq', {
       '@context': 'https://schema.org',
@@ -225,6 +277,7 @@ export class LandingPage {
   }
 
   readonly demoText = DEMO_TEXT;
+  readonly repoUrl = REPO_URL;
   readonly faq = FAQ;
   readonly promises = ['Grátis e sem cadastro', 'Seu texto não sai do navegador', 'No celular e no computador'];
   readonly steps = [
